@@ -38,19 +38,25 @@ export const parseQuizResponse = (raw) => {
   }
 
   // Normalize each question object
-  return questions.map((q, idx) => {
+  const validQuestions = [];
+  questions.forEach((q, idx) => {
     if (typeof q === 'string') {
-      return {
-        id: idx,
-        question: q,
-        options: ['True', 'False', 'Neither', 'Both'],
-        correctIndex: 0,
-        explanation: 'Default question format.',
-      };
+      const parsed = cleanAndParseJsonString(q);
+      if (parsed && typeof parsed === 'object') {
+        q = parsed;
+      } else {
+        return;
+      }
     }
 
-    const questionText = q.question || q.prompt || q.title || `Question ${idx + 1}`;
-    let options = Array.isArray(q.options) ? q.options : ['Option A', 'Option B', 'Option C', 'Option D'];
+    if (!q || typeof q !== 'object') return;
+
+    const questionText = q.question || q.prompt || q.title;
+    if (!questionText || typeof questionText !== 'string' || !questionText.trim()) return;
+
+    if (!Array.isArray(q.options) || q.options.length < 2) return;
+    const options = q.options.map((opt) => String(opt).trim()).filter((opt) => opt.length > 0);
+    if (options.length < 2) return;
 
     // Determine correct index
     let correctIndex = 0;
@@ -60,23 +66,27 @@ export const parseQuizResponse = (raw) => {
       correctIndex = q.correctIndex;
     } else if (typeof q.correct_index === 'number') {
       correctIndex = q.correct_index;
+    } else if (typeof q.answerIndex === 'number') {
+      correctIndex = q.answerIndex;
     } else if (typeof q.correctAnswer === 'number') {
       correctIndex = q.correctAnswer;
     } else if (typeof q.correctAnswer === 'string') {
       const foundIdx = options.findIndex(
-        (opt) => opt.toLowerCase().trim() === q.correctAnswer.toLowerCase().trim()
+        (opt) => opt.toLowerCase() === q.correctAnswer.toLowerCase().trim()
       );
       if (foundIdx !== -1) correctIndex = foundIdx;
     }
 
-    return {
-      id: idx,
-      question: questionText,
-      options: options.map((opt) => String(opt)),
+    validQuestions.push({
+      id: validQuestions.length,
+      question: questionText.trim(),
+      options,
       correctIndex: Math.max(0, Math.min(correctIndex, options.length - 1)),
       explanation: q.explanation || q.reasoning || '',
-    };
+    });
   });
+
+  return validQuestions;
 };
 
 /**
@@ -107,6 +117,10 @@ export const parseFlashcardResponse = (raw) => {
     } else if (typeof data.flashcards === 'string') {
       const parsed = cleanAndParseJsonString(data.flashcards);
       if (Array.isArray(parsed)) cards = parsed;
+    } else if (data.data) {
+      if (Array.isArray(data.data.flashcards)) cards = data.data.flashcards;
+      else if (Array.isArray(data.data.cards)) cards = data.data.cards;
+      else if (Array.isArray(data.data)) cards = data.data;
     }
   }
 
@@ -114,24 +128,38 @@ export const parseFlashcardResponse = (raw) => {
     return [];
   }
 
-  return cards.map((c, idx) => {
+  const validCards = [];
+  cards.forEach((c) => {
     if (typeof c === 'string') {
-      return {
-        id: idx,
-        front: `Concept ${idx + 1}`,
-        back: c,
-      };
+      const parsed = cleanAndParseJsonString(c);
+      if (parsed && typeof parsed === 'object') {
+        c = parsed;
+      } else {
+        return;
+      }
     }
 
-    const front = c.front || c.question || c.concept || c.title || `Flashcard ${idx + 1}`;
-    const back = c.back || c.answer || c.explanation || c.definition || 'No explanation provided.';
+    if (!c || typeof c !== 'object') return;
 
-    return {
-      id: idx,
-      front: String(front),
-      back: String(back),
-    };
+    const front = c.front || c.question || c.concept || c.prompt || c.title;
+    const back = c.back || c.answer || c.explanation || c.definition;
+
+    if (!front || !back) return;
+
+    const frontStr = String(front).trim();
+    const backStr = String(back).trim();
+
+    if (!frontStr || !backStr) return;
+
+    validCards.push({
+      id: validCards.length,
+      front: frontStr,
+      back: backStr,
+      concept: c.concept ? String(c.concept).trim() : frontStr,
+    });
   });
+
+  return validCards;
 };
 
 /**

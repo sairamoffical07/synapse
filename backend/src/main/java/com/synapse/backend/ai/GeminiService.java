@@ -34,60 +34,14 @@ public class GeminiService {
         this.model = model;
     }
 
-    private String generateFallbackResponse(String prompt) {
-        log.warn("Gemini API key is unconfigured or call failed. Producing fallback grounded AI response.");
-
-        if (prompt.contains("QUIZ") || prompt.contains("[") && prompt.contains("question")) {
-            return """
-                [
-                  {
-                    "question": "What is a primary characteristic of an Embedded System?",
-                    "options": ["General purpose computing", "Dedicated single-function operation", "Requires high GPU memory", "Unbounded response times"],
-                    "correctIndex": 1
-                  },
-                  {
-                    "question": "Which component is essential in real-time embedded architectures?",
-                    "options": ["Web browser", "Microcontroller / RTOS", "Graphics card", "External hard drive"],
-                    "correctIndex": 1
-                  },
-                  {
-                    "question": "What is the primary role of a vector database in RAG applications?",
-                    "options": ["Execute SQL joins", "Store high-dimensional semantic embeddings for fast retrieval", "Compile Java bytecode", "Host static HTML files"],
-                    "correctIndex": 1
-                  }
-                ]
-                """;
-        }
-
-        if (prompt.contains("FLASHCARD") || prompt.contains("front") || prompt.contains("back")) {
-            return """
-                [
-                  {
-                    "question": "Embedded System",
-                    "answer": "A controller-based computer system designed to perform a dedicated function within a larger mechanical or electrical system."
-                  },
-                  {
-                    "question": "RTOS (Real-Time Operating System)",
-                    "answer": "An operating system intended to serve real-time applications that process data as it comes in, typically without buffer delays."
-                  },
-                  {
-                    "question": "Semantic Retrieval (RAG)",
-                    "answer": "A technique that retrieves document chunks based on mathematical vector similarity matching rather than keyword search."
-                  }
-                ]
-                """;
-        }
-
-        return "Based on your uploaded study materials:\n\nThe document details core academic concepts regarding system design, architecture, and functional components. Key topics include dedicated microcontroller processing, real-time response constraints, and structured knowledge organization.";
-    }
-
     public String generateText(String prompt) {
         if (prompt == null || prompt.isBlank()) {
             throw new IllegalArgumentException("Prompt cannot be empty");
         }
 
         if (apiKey.isEmpty()) {
-            return generateFallbackResponse(prompt);
+            log.error("Gemini API key is unconfigured. Set the GEMINI_API_KEY environment variable.");
+            throw new AIServiceException("Gemini API key is not configured on the server. Please set GEMINI_API_KEY.");
         }
 
         String url = GEMINI_API_URL + model + ":generateContent?key=" + apiKey;
@@ -113,7 +67,7 @@ public class GeminiService {
                         List<Map<String, Object>> parts = (List<Map<String, Object>>) candidateContent.get("parts");
                         if (parts != null && !parts.isEmpty()) {
                             String text = (String) parts.get(0).get("text");
-                            if (text != null) {
+                            if (text != null && !text.isBlank()) {
                                 return text.trim();
                             }
                         }
@@ -121,11 +75,13 @@ public class GeminiService {
                 }
             }
 
-            return generateFallbackResponse(prompt);
+            throw new AIServiceException("Gemini API returned an empty or invalid response candidate.");
 
+        } catch (AIServiceException aie) {
+            throw aie;
         } catch (Exception ex) {
-            log.error("Error calling Gemini GenerateContent API. Returning grounded fallback response.", ex);
-            return generateFallbackResponse(prompt);
+            log.error("Error calling Gemini GenerateContent API", ex);
+            throw new AIServiceException("Failed to generate text from Gemini AI: " + ex.getMessage(), ex);
         }
     }
 }
