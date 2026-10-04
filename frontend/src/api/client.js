@@ -1,4 +1,13 @@
-const BASE_URL = '/api';
+const getBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl && envUrl.trim() !== '') {
+    const cleanUrl = envUrl.trim().replace(/\/+$/, '');
+    return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+  }
+  return '/api';
+};
+
+const BASE_URL = getBaseUrl();
 
 export const apiClient = async (endpoint, options = {}) => {
   const token = localStorage.getItem('synapse_token');
