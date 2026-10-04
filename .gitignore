@@ -1,0 +1,23 @@
+# Maven build artifacts
+backend/target/
+target/
+
+# Uploaded files & temporary storage
+backend/uploads/
+uploads/
+
+# IDE files
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs
+*.log
