@@ -1,46 +1,85 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
-import { Menu, Cpu } from 'lucide-react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Menu, LogOut, UploadCloud } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { Logo } from '../common/Logo';
+import { Button } from '../common/Button';
+import { navItems } from './navItems';
 
+const navLinkClass = ({ isActive }) =>
+  `inline-flex items-center gap-2 h-10 px-3.5 rounded-lg border-2 text-[15px] font-bold transition-colors ${
+    isActive
+      ? 'bg-black border-black text-yellow'
+      : 'border-transparent text-black hover:bg-white hover:border-black'
+  }`;
+
+// Yellow app bar: brand, workspace routes, the primary upload action and account controls.
 export const Header = ({ onOpenMobile }) => {
-  const location = useLocation();
-  const { user } = useAuth();
-
-  const getPageTitle = (path) => {
-    switch (path) {
-      case '/': return 'Study Overview';
-      case '/materials': return 'Study Materials Library';
-      case '/chat': return 'Synapse AI Assistant';
-      case '/practice': return 'Active Revision & Practice';
-      case '/profile': return 'Student Profile';
-      default: return 'Synapse Workspace';
-    }
-  };
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const initial = user?.email ? user.email.charAt(0).toUpperCase() : 'S';
 
   return (
-    <header className="h-14 border-b border-[#1f293d] bg-[#0b0f17]/80 backdrop-blur-md px-4 md:px-6 flex items-center justify-between sticky top-0 z-30 select-none">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onOpenMobile}
-          className="md:hidden text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-[#182032]"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-
-        <h1 className="text-sm font-semibold text-slate-200 tracking-tight">
-          {getPageTitle(location.pathname)}
-        </h1>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#111726] border border-[#26334a] text-xs text-slate-400">
-          <Cpu className="w-3.5 h-3.5 text-blue-400" />
-          <span className="text-[11px] font-medium text-slate-300">Gemini Grounded RAG</span>
+    <header className="sticky top-0 z-30 bg-yellow border-b-2 border-black">
+      <div className="max-w-7xl mx-auto h-16 px-3 sm:px-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={onOpenMobile}
+            aria-label="Open navigation"
+            className="lg:hidden w-10 h-10 inline-flex items-center justify-center rounded-lg border-2 border-black bg-white text-black shadow-brut press"
+          >
+            <Menu className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
+          </button>
+          <Link to="/" aria-label="Synapse dashboard" className="rounded-lg ml-1 lg:ml-0">
+            <Logo />
+          </Link>
         </div>
 
-        <div className="w-7 h-7 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-xs font-semibold text-blue-400">
-          {user?.email ? user.email.charAt(0).toUpperCase() : 'S'}
+        <nav aria-label="Primary" className="hidden lg:block">
+          <ul className="flex items-center gap-1">
+            {navItems.map(({ label, path, icon: Icon, end }) => (
+              <li key={path}>
+                <NavLink to={path} end={end} className={navLinkClass}>
+                  <Icon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
+                  {label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <Button
+            variant="dark"
+            size="sm"
+            icon={UploadCloud}
+            className="hidden sm:inline-flex"
+            onClick={() => navigate('/materials')}
+          >
+            Upload
+          </Button>
+          <NavLink
+            to="/profile"
+            aria-label="Your profile"
+            title={user?.email}
+            className={({ isActive }) =>
+              `w-10 h-10 rounded-lg border-2 border-black flex items-center justify-center font-display text-lg font-extrabold transition-colors ${
+                isActive ? 'bg-black text-yellow' : 'bg-sage text-black hover:bg-white'
+              }`
+            }
+          >
+            {initial}
+          </NavLink>
+          <button
+            type="button"
+            onClick={logout}
+            aria-label="Sign out"
+            title="Sign out"
+            className="hidden lg:inline-flex w-10 h-10 items-center justify-center rounded-lg border-2 border-transparent text-black hover:border-black hover:bg-white transition-colors"
+          >
+            <LogOut className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
+          </button>
         </div>
       </div>
     </header>

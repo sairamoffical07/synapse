@@ -1,67 +1,146 @@
 @import "tailwindcss";
 
+/*
+ * Synapse design tokens: neo-brutalist.
+ * Brand palette is fixed: yellow, charcoal, sage, white, black.
+ * Neutral grays exist only for secondary text, disabled states and skeletons.
+ * Hard shadows only (zero blur), 2px black borders, no gradients.
+ */
+@theme {
+  --color-*: initial;
+  --color-yellow: #ffe17c;
+  --color-charcoal: #171e19;
+  --color-sage: #b7c6c2;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-gray-700: #4d4d4d; /* secondary text: >= 4.7:1 on white, yellow and sage */
+  --color-gray-400: #8c8c8c; /* disabled */
+  --color-gray-100: #ededed; /* skeletons, disabled fills */
+
+  --font-display: "Cabinet Grotesk", "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Satoshi", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --shadow-brut-sm: 2px 2px 0 #000;
+  --shadow-brut: 4px 4px 0 #000;
+  --shadow-brut-lg: 8px 8px 0 #000;
+
+  --animate-fade-in: fade-in 0.2s ease-out both;
+  --animate-soft-pulse: soft-pulse 1.6s steps(2, jump-none) infinite;
+}
+
 @layer base {
-  :root {
-    --bg-main: #0b0f17;
-    --bg-surface: #111726;
-    --bg-surface-elevated: #182032;
-    --bg-surface-hover: #1f293d;
-    --border-subtle: #26334a;
-    --border-strong: #3b4d6b;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
-    --accent-blue: #3b82f6;
-    --accent-indigo: #6366f1;
-    --accent-cyan: #38bdf8;
+  html {
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
-    background-color: var(--bg-main);
-    color: var(--text-primary);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--color-white);
+    color: var(--color-charcoal);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: var(--color-yellow);
+    color: var(--color-black);
+  }
+
+  /* One focus treatment everywhere: thick black outline, yellow on dark surfaces. */
+  :focus-visible {
+    outline: 3px solid var(--color-black);
+    outline-offset: 3px;
+  }
+
+  .on-dark :focus-visible {
+    outline-color: var(--color-yellow);
+  }
+
+  input::placeholder {
+    color: var(--color-gray-700);
+    opacity: 0.8;
   }
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Subtle 32px dot grid for yellow surfaces (10% opacity). */
+@utility dot-grid {
+  background-image: radial-gradient(circle, rgb(0 0 0 / 0.1) 1.5px, transparent 1.6px);
+  background-size: 32px 32px;
 }
 
-::-webkit-scrollbar-track {
-  background: #0b0f17;
+/*
+ * Press interaction for raised elements: move toward the shadow on hover,
+ * land flat on press. Pair with shadow-brut or shadow-brut-lg.
+ */
+@utility press {
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out, background-color 120ms ease-out;
+  &:hover:not(:disabled) {
+    transform: translate(2px, 2px);
+    box-shadow: var(--shadow-brut-sm);
+  }
+  &:active:not(:disabled) {
+    transform: translate(4px, 4px);
+    box-shadow: none;
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  background: #26334a;
-  border-radius: 4px;
+@utility press-lg {
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out, background-color 120ms ease-out;
+  &:hover:not(:disabled) {
+    transform: translate(4px, 4px);
+    box-shadow: var(--shadow-brut);
+  }
+  &:active:not(:disabled) {
+    transform: translate(8px, 8px);
+    box-shadow: none;
+  }
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #3b4d6b;
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-black) transparent;
 }
 
-/* Animations & Transitions */
-@keyframes fadeIn {
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes fade-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+@keyframes soft-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 
-.animate-pulse-glow {
-  animation: pulseGlow 2s infinite ease-in-out;
+  .press:hover, .press:active, .press-lg:hover, .press-lg:active {
+    transform: none !important;
+  }
 }

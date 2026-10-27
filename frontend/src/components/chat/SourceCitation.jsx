@@ -1,50 +1,52 @@
-import React, { useState } from 'react';
-import { BookOpen, ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import React, { useId, useState } from 'react';
+import { BookOpen, ChevronDown, FileText } from 'lucide-react';
 
 export const SourceCitation = ({ sources }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const panelId = useId();
 
   if (!sources || sources.length === 0) return null;
 
   return (
-    <div className="mt-3 border border-[#26334a] rounded-lg bg-[#0b0f17]/60 overflow-hidden text-xs">
+    <div className="mt-4 rounded-lg border-2 border-black bg-white overflow-hidden">
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 py-2 flex items-center justify-between text-slate-300 hover:text-slate-100 hover:bg-[#182032] transition-colors"
+        aria-expanded={isOpen}
+        aria-controls={panelId}
+        className="w-full h-11 px-3.5 flex items-center justify-between gap-2 bg-sage text-black font-bold text-[15px] hover:bg-yellow transition-colors"
       >
-        <div className="flex items-center gap-2">
-          <BookOpen className="w-3.5 h-3.5 text-blue-400" />
-          <span className="font-medium text-slate-300">
-            {sources.length} Grounded Document {sources.length === 1 ? 'Citation' : 'Citations'}
-          </span>
-        </div>
-        {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        <span className="flex items-center gap-2">
+          <BookOpen className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
+          {sources.length} {sources.length === 1 ? 'source' : 'sources'} from your library
+        </span>
+        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={2.5} aria-hidden="true" />
       </button>
 
       {isOpen && (
-        <div className="p-3 border-t border-[#1f293d] space-y-2 bg-[#0b0f17]">
+        <ol id={panelId} className="divide-y-2 divide-black border-t-2 border-black">
           {sources.map((source, idx) => (
-            <div
-              key={idx}
-              className="p-2.5 rounded-md bg-[#111726] border border-[#26334a] flex flex-col gap-1 text-[11px]"
-            >
-              <div className="flex items-center justify-between text-slate-300 font-medium">
-                <span className="flex items-center gap-1.5 truncate">
-                  <FileText className="w-3 h-3 text-blue-400 shrink-0" />
-                  {source.fileName || `Study Material #${source.studyMaterialId}`}
+            <li key={idx} className="px-3.5 py-3 flex flex-col gap-1.5">
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex items-start gap-2 min-w-0 text-black font-bold text-[15px]">
+                  <span className="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-md bg-black text-yellow text-xs tabular-nums">
+                    {idx + 1}
+                  </span>
+                  <FileText className="w-4 h-4 mt-1 shrink-0" strokeWidth={2.5} aria-hidden="true" />
+                  <span className="break-words">{source.fileName || `Study Material #${source.studyMaterialId}`}</span>
                 </span>
-                <span className="text-[10px] text-slate-400 px-1.5 py-0.5 rounded bg-[#182032] border border-[#26334a]">
-                  Chunk #{source.chunkIndex ?? idx + 1}
+                <span className="text-[13px] font-bold text-gray-700 whitespace-nowrap shrink-0 pt-0.5">
+                  Passage {source.chunkIndex ?? idx + 1}
                 </span>
               </div>
               {source.excerpt && (
-                <p className="text-slate-400 italic line-clamp-2 mt-0.5 font-mono text-[10px] leading-relaxed">
-                  "{source.excerpt}"
+                <p className="text-[15px] text-black leading-relaxed line-clamp-3 border-l-4 border-yellow pl-3">
+                  {source.excerpt}
                 </p>
               )}
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
       )}
     </div>
   );

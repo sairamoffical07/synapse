@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { Bot, User, Sparkles, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, RotateCw } from 'lucide-react';
 import { SourceCitation } from './SourceCitation';
+import { LogoMark } from '../common/Logo';
+import { QuizOption } from '../practice/QuizOption';
 import { parseQuizResponse, parseFlashcardResponse } from '../../utils/quizParser';
+
+const formatTime = (timestamp) =>
+  timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
 export const ChatMessage = ({ message }) => {
   const isUser = message.sender === 'user';
@@ -11,60 +16,53 @@ export const ChatMessage = ({ message }) => {
   const quizQuestions = !isUser && !isThinking ? parseQuizResponse(message.text) : [];
   const flashcards = !isUser && !isThinking && quizQuestions.length === 0 ? parseFlashcardResponse(message.text) : [];
 
-  return (
-    <div className={`flex items-start gap-3 text-xs leading-relaxed ${isUser ? 'flex-row-reverse' : ''}`}>
-      <div
-        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
-          isUser
-            ? 'bg-blue-600/20 border-blue-500/30 text-blue-400'
-            : 'bg-indigo-950/40 border-indigo-800/40 text-indigo-400'
-        }`}
-      >
-        {isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
-      </div>
-
-      <div
-        className={`max-w-2xl rounded-xl p-4 border ${
-          isUser
-            ? 'bg-blue-600/15 border-blue-500/20 text-slate-100 rounded-tr-none'
-            : 'bg-[#111726] border-[#26334a] text-slate-200 rounded-tl-none'
-        }`}
-      >
-        {!isUser && (
-          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-blue-400 mb-1.5 tracking-wider uppercase">
-            <Sparkles className="w-3 h-3" />
-            <span>SYNAPSE AI</span>
+  if (isUser) {
+    return (
+      <div className="flex justify-end animate-fade-in">
+        <div className="max-w-[85%] sm:max-w-xl">
+          <div className="rounded-lg bg-yellow border-2 border-black shadow-brut text-black px-4 py-2.5 text-base leading-relaxed whitespace-pre-wrap break-words">
+            {message.text}
           </div>
-        )}
+          <p className="mt-2 text-right text-xs font-bold text-gray-700">You · {formatTime(message.timestamp)}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <article className="flex items-start gap-3 animate-fade-in" aria-label="Synapse response">
+      <LogoMark className="w-8 h-8 mt-0.5" />
+
+      <div className="flex-1 min-w-0 max-w-3xl">
+        <div className="flex items-baseline gap-2 mb-1.5">
+          <span className="font-display text-lg font-extrabold text-black">Synapse</span>
+          {!isThinking && <span className="text-xs font-bold text-gray-700">{formatTime(message.timestamp)}</span>}
+        </div>
 
         {isThinking ? (
-          <div className="flex items-center gap-2 text-slate-400 py-1">
-            <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-            <span>Analyzing your study materials & generating grounded answer...</span>
+          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-black bg-sage text-black text-[15px] font-bold" role="status">
+            <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2.5} aria-hidden="true" />
+            <span>Searching your materials and composing an answer…</span>
           </div>
         ) : quizQuestions.length > 0 ? (
           <EmbeddedQuizList questions={quizQuestions} />
         ) : flashcards.length > 0 ? (
           <EmbeddedFlashcardList flashcards={flashcards} />
         ) : (
-          <div className="whitespace-pre-wrap space-y-2 text-slate-200">
+          <div className="bg-white border-2 border-black rounded-lg px-4 py-3.5 text-base text-black leading-[1.7] whitespace-pre-wrap break-words">
             {message.text}
           </div>
         )}
 
-        {!isUser && message.sources && message.sources.length > 0 && (
+        {message.sources && message.sources.length > 0 && (
           <SourceCitation sources={message.sources} />
         )}
-
-        <div className="mt-2 text-[10px] text-slate-400 text-right">
-          {message.timestamp ? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-        </div>
       </div>
-    </div>
+    </article>
   );
 };
 
-// Sub-component for rendering quiz questions inside chat message bubble
+// Sub-component for rendering quiz questions inside a chat response
 const EmbeddedQuizList = ({ questions }) => {
   const [selectedAnswers, setSelectedAnswers] = useState({});
 
@@ -75,9 +73,7 @@ const EmbeddedQuizList = ({ questions }) => {
 
   return (
     <div className="space-y-4 my-1">
-      <div className="text-xs font-medium text-slate-300">
-        Generated Quiz Questions ({questions.length} questions):
-      </div>
+      <p className="text-[15px] text-black">Here are {questions.length} questions to check your understanding:</p>
 
       {questions.map((q, qIdx) => {
         const selectedOpt = selectedAnswers[qIdx];
@@ -85,58 +81,30 @@ const EmbeddedQuizList = ({ questions }) => {
         const isCorrect = selectedOpt === q.correctIndex;
 
         return (
-          <div key={qIdx} className="p-3.5 rounded-xl bg-[#182032] border border-[#26334a] space-y-2.5">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-blue-400">
-              <span>Question {qIdx + 1} of {questions.length}</span>
-            </div>
+          <div key={qIdx} className="p-4 rounded-xl bg-white border-2 border-black shadow-brut space-y-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-gray-700">Question {qIdx + 1} of {questions.length}</p>
+            <p className="font-display text-xl font-bold leading-snug text-black">{q.question}</p>
 
-            <p className="font-semibold text-slate-100 text-xs">{q.question}</p>
-
-            <div className="space-y-1.5">
-              {q.options.map((opt, optIdx) => {
-                const isSelected = selectedOpt === optIdx;
-                const isThisCorrect = optIdx === q.correctIndex;
-
-                let style = 'bg-[#111726] border-[#26334a] text-slate-300 hover:border-[#3b4d6b]';
-                let icon = null;
-
-                if (isAnswered) {
-                  if (isSelected && isCorrect) {
-                    style = 'bg-emerald-950/40 border-emerald-500 text-emerald-200 font-medium';
-                    icon = <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />;
-                  } else if (isSelected && !isCorrect) {
-                    style = 'bg-red-950/40 border-red-500 text-red-200 font-medium';
-                    icon = <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />;
-                  } else if (isThisCorrect && !isCorrect) {
-                    style = 'bg-emerald-950/30 border-emerald-500/60 text-emerald-300';
-                    icon = <span className="text-[9px] font-semibold text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/40">Correct Answer</span>;
-                  } else {
-                    style = 'bg-[#111726]/50 border-[#26334a]/40 text-slate-500 opacity-60';
-                  }
-                }
-
-                return (
-                  <button
-                    key={optIdx}
-                    disabled={isAnswered}
-                    onClick={() => handleSelectOption(qIdx, optIdx)}
-                    className={`w-full text-left p-2.5 rounded-lg border text-xs transition-all flex items-center justify-between gap-2 ${style}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded bg-[#0b0f17] border border-[#26334a] flex items-center justify-center text-[10px] font-semibold text-slate-400 shrink-0">
-                        {String.fromCharCode(65 + optIdx)}
-                      </span>
-                      <span>{opt}</span>
-                    </div>
-                    {icon}
-                  </button>
-                );
-              })}
+            <div className="space-y-2">
+              {q.options.map((opt, optIdx) => (
+                <QuizOption
+                  key={optIdx}
+                  index={optIdx}
+                  text={opt}
+                  compact
+                  isAnswered={isAnswered}
+                  isSelected={selectedOpt === optIdx}
+                  isThisCorrect={optIdx === q.correctIndex}
+                  isCorrect={isCorrect}
+                  onSelect={() => handleSelectOption(qIdx, optIdx)}
+                />
+              ))}
             </div>
 
             {isAnswered && q.explanation && (
-              <p className="text-[11px] text-slate-400 italic pt-1 border-t border-[#26334a]">
-                Explanation: {q.explanation}
+              <p className="text-[15px] text-black leading-relaxed pt-3 border-t-2 border-black">
+                <span className="font-bold">Explanation: </span>
+                {q.explanation}
               </p>
             )}
           </div>
@@ -146,7 +114,7 @@ const EmbeddedQuizList = ({ questions }) => {
   );
 };
 
-// Sub-component for rendering flashcards inside chat message bubble
+// Sub-component for rendering flashcards inside a chat response
 const EmbeddedFlashcardList = ({ flashcards }) => {
   const [flippedCards, setFlippedCards] = useState({});
 
@@ -156,28 +124,32 @@ const EmbeddedFlashcardList = ({ flashcards }) => {
 
   return (
     <div className="space-y-3 my-1">
-      <div className="text-xs font-medium text-slate-300">
-        Generated Revision Flashcards ({flashcards.length} cards):
-      </div>
+      <p className="text-[15px] text-black">Here are {flashcards.length} flashcards. Select a card to reveal its answer.</p>
 
       {flashcards.map((card, idx) => {
         const isFlipped = !!flippedCards[idx];
 
         return (
-          <div
+          <button
             key={idx}
+            type="button"
             onClick={() => toggleFlip(idx)}
-            className="p-4 rounded-xl bg-[#182032] border border-[#26334a] hover:border-blue-500/40 cursor-pointer space-y-2 transition-all"
+            aria-pressed={isFlipped}
+            className={`w-full text-left p-4 rounded-xl border-2 border-black space-y-2 shadow-brut press ${
+              isFlipped ? 'bg-sage' : 'bg-white hover:bg-yellow'
+            }`}
           >
-            <div className="flex items-center justify-between text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              <span>Card {idx + 1} — {isFlipped ? 'Back (Explanation)' : 'Front (Concept)'}</span>
-              <span className="text-blue-400">Click to flip</span>
-            </div>
-
-            <p className="text-xs font-semibold text-slate-100">
+            <span className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-black">
+              <span>Card {idx + 1} · {isFlipped ? 'Answer' : 'Prompt'}</span>
+              <span className="inline-flex items-center gap-1">
+                <RotateCw className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden="true" />
+                Flip
+              </span>
+            </span>
+            <span className="block font-display text-xl font-bold leading-snug text-black">
               {isFlipped ? card.back : card.front}
-            </p>
-          </div>
+            </span>
+          </button>
         );
       })}
     </div>

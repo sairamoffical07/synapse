@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Layers, RotateCw, ChevronLeft, ChevronRight, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Layers, RotateCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../common/Button';
-import { Input } from '../common/Input';
+import { PracticeForm, PracticeLoading } from './PracticeForm';
 import { aiApi } from '../../api/ai';
 import { parseFlashcardResponse } from '../../utils/quizParser';
 
@@ -59,11 +59,10 @@ export const FlashcardView = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 bg-[#111726] border border-[#26334a] rounded-xl text-center space-y-3 max-w-2xl mx-auto">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-        <p className="text-sm font-medium text-slate-200">Building active revision flashcards...</p>
-        <p className="text-xs text-slate-400">Extracting key concepts & explanations from uploaded materials</p>
-      </div>
+      <PracticeLoading
+        title="Building your flashcards…"
+        description={`Pulling key concepts and explanations about “${topic}” from your materials.`}
+      />
     );
   }
 
@@ -71,57 +70,60 @@ export const FlashcardView = () => {
     const card = flashcards[currentIdx];
 
     return (
-      <div className="bg-[#111726] border border-[#26334a] rounded-xl p-5 md:p-7 space-y-6 animate-fade-in max-w-2xl mx-auto">
-        {/* Progress Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[#1f293d]">
-          <span className="px-2.5 py-1 rounded bg-blue-600/15 border border-blue-500/20 text-blue-400 text-xs font-semibold">
-            Flashcard {currentIdx + 1} of {flashcards.length}
+      <div className="max-w-2xl space-y-5 animate-fade-in">
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <span className="px-2.5 py-1 rounded-md border-2 border-black bg-black text-yellow font-bold tabular-nums whitespace-nowrap">
+            Card {currentIdx + 1} of {flashcards.length}
           </span>
-          <span className="text-xs text-slate-400 truncate max-w-xs">{topic}</span>
+          <span className="font-bold text-black truncate min-w-0" title={topic}>{topic}</span>
         </div>
 
-        {/* Interactive Flip Card Container */}
-        <div
+        {/* Flip card: the whole card is a button so it works with keyboard and screen readers */}
+        <button
+          type="button"
           onClick={() => setIsFlipped(!isFlipped)}
-          className={`relative min-h-[240px] md:min-h-[280px] border rounded-xl p-6 md:p-8 cursor-pointer flex flex-col items-center justify-center text-center transition-all select-none shadow-sm ${
-            isFlipped
-              ? 'bg-[#182032] border-blue-500/40 text-slate-100'
-              : 'bg-[#111726] border-[#26334a] hover:border-blue-500/40 text-slate-200'
+          aria-pressed={isFlipped}
+          aria-label={`${isFlipped ? 'Answer' : 'Prompt'}: ${isFlipped ? card.back : card.front}. Select to flip.`}
+          className={`relative w-full min-h-[280px] sm:min-h-[320px] rounded-xl border-2 border-black px-6 py-14 sm:px-12 flex flex-col items-center justify-center text-center shadow-brut-lg press-lg ${
+            isFlipped ? 'bg-sage' : 'bg-yellow dot-grid'
           }`}
         >
-          <span className="absolute top-4 left-4 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-            {isFlipped ? 'Back — Explanation' : 'Front — Question / Concept'}
+          <span className="absolute top-4 left-4 px-2 py-0.5 rounded-md border-2 border-black bg-white text-xs font-bold uppercase tracking-wider text-black">
+            {isFlipped ? 'Answer' : 'Prompt'}
           </span>
 
-          <p className="text-sm md:text-base font-semibold max-w-md leading-relaxed">
+          <span
+            key={`${currentIdx}-${isFlipped}`}
+            className={`block max-w-lg font-display font-extrabold leading-tight text-black break-words animate-fade-in ${
+              isFlipped ? 'text-xl sm:text-2xl font-bold' : 'text-2xl sm:text-4xl'
+            }`}
+          >
             {isFlipped ? card.back : card.front}
-          </p>
-
-          <span className="absolute bottom-4 right-4 text-[11px] text-blue-400 flex items-center gap-1.5 font-medium">
-            <RotateCw className="w-3.5 h-3.5" />
-            Click to flip
           </span>
+
+          <span className="absolute bottom-4 right-4 text-sm font-bold text-black inline-flex items-center gap-1.5">
+            <RotateCw className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
+            {isFlipped ? 'Show prompt' : 'Reveal answer'}
+          </span>
+        </button>
+
+        {/* Deck position */}
+        <div className="flex justify-center gap-1.5" aria-hidden="true">
+          {flashcards.map((c, idx) => (
+            <span
+              key={c.id}
+              className={`h-3 rounded-sm border-2 border-black transition-all ${idx === currentIdx ? 'w-8 bg-black' : 'w-3 bg-white'}`}
+            />
+          ))}
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center justify-between pt-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={currentIdx === 0}
-            onClick={handlePrev}
-            icon={ChevronLeft}
-          >
+        <div className="flex items-center justify-between gap-2">
+          <Button variant="secondary" size="sm" disabled={currentIdx === 0} onClick={handlePrev} icon={ChevronLeft}>
             Previous
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsFlipped(!isFlipped)}
-            icon={RotateCw}
-          >
-            Flip Card
+          <Button variant="outline" size="sm" onClick={() => setIsFlipped(!isFlipped)} icon={RotateCw}>
+            Flip
           </Button>
 
           <Button
@@ -130,53 +132,37 @@ export const FlashcardView = () => {
             disabled={currentIdx === flashcards.length - 1}
             onClick={handleNext}
           >
-            Next <ChevronRight className="w-4 h-4 ml-1 inline" />
+            Next <ChevronRight className="w-4 h-4 ml-1" strokeWidth={2.5} aria-hidden="true" />
           </Button>
+        </div>
+
+        <div className="text-center pt-2">
+          <button
+            type="button"
+            onClick={() => setFlashcards(null)}
+            className="text-[15px] font-bold text-black underline underline-offset-4 decoration-2 hover:bg-yellow rounded px-1"
+          >
+            Generate a new deck
+          </button>
         </div>
       </div>
     );
   }
 
-  // Form State
   return (
-    <form onSubmit={handleGenerate} className="bg-[#111726] border border-[#26334a] rounded-xl p-6 space-y-5 max-w-2xl mx-auto">
-      <div className="space-y-1">
-        <h3 className="text-sm font-semibold text-slate-200">AI Flashcard Generator</h3>
-        <p className="text-xs text-slate-400">Generate digital study flashcards for active concept recall.</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="sm:col-span-2">
-          <Input
-            label="Topic / Subject"
-            placeholder="e.g. Data Structures, Real-Time Operating Systems..."
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <Input
-            label="Number of Cards"
-            type="number"
-            min="1"
-            max="10"
-            value={count}
-            onChange={(e) => setCount(e.target.value)}
-            required
-          />
-        </div>
-      </div>
-
-      {error && (
-        <div className="p-3 rounded-lg bg-red-950/40 border border-red-800/40 text-red-400 text-xs">
-          {error}
-        </div>
-      )}
-
-      <Button type="submit" variant="primary" icon={Layers} isLoading={loading}>
-        Generate Flashcards
-      </Button>
-    </form>
+    <PracticeForm
+      title="Flashcard generator"
+      description="Turn the key concepts in your materials into cards for active recall."
+      topic={topic}
+      onTopicChange={(e) => setTopic(e.target.value)}
+      topicPlaceholder="e.g. Data structures, real-time operating systems…"
+      count={count}
+      onCountChange={(e) => setCount(e.target.value)}
+      countLabel="Cards"
+      error={error}
+      submitLabel="Generate flashcards"
+      submitIcon={Layers}
+      onSubmit={handleGenerate}
+    />
   );
 };

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, GraduationCap, BookOpen, Sparkles, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, GraduationCap, BookOpen } from 'lucide-react';
 import { Button } from '../components/common/Button';
-import { Input } from '../components/common/Input';
+import { Input, Select } from '../components/common/Input';
+import { Alert } from '../components/common/Alert';
+import { AuthLayout } from '../components/layout/AuthLayout';
 import { useAuth } from '../context/AuthContext';
 
 export const RegisterPage = () => {
@@ -46,40 +48,24 @@ export const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f17] flex items-center justify-center p-4">
-      <div className="w-full max-w-lg space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-flex w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 items-center justify-center text-white shadow-md border border-blue-400/30 mb-2">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          <h1 className="text-xl font-bold tracking-wider text-slate-100 uppercase">SYNAPSE</h1>
-          <p className="text-xs text-slate-400 font-medium tracking-tight">KNOWLEDGE, CONNECTED.</p>
+    <AuthLayout>
+      <div className="space-y-7">
+        <div className="space-y-1.5">
+          <h1 className="text-4xl sm:text-5xl leading-[1.05] text-black">Create your workspace</h1>
+          <p className="text-base text-gray-700">Set up a student account to start organizing your study materials.</p>
         </div>
 
-        <div className="bg-[#111726] border border-[#26334a] rounded-xl p-6 sm:p-8 space-y-5 shadow-xl">
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold text-slate-200">Create student account</h2>
-            <p className="text-xs text-slate-400">Set up your workspace to manage study materials</p>
-          </div>
+        {error && <Alert variant="error">{error}</Alert>}
+        {successMsg && <Alert variant="success">{successMsg}</Alert>}
 
-          {error && (
-            <div className="p-3 rounded-lg bg-red-950/40 border border-red-800/40 text-red-400 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {successMsg && (
-            <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-800/40 text-emerald-400 text-xs flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 shrink-0" />
-              <span>{successMsg}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-3.5">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <fieldset className="space-y-4">
+            <legend className="inline-block px-2 py-0.5 mb-3 bg-sage border-2 border-black rounded-md text-[13px] font-bold uppercase tracking-wider text-black">Account</legend>
             <Input
-              label="Full Name"
+              label="Full name"
+              id="register-name"
               type="text"
+              autoComplete="name"
               placeholder="Jane Doe"
               icon={User}
               value={fullName}
@@ -88,8 +74,10 @@ export const RegisterPage = () => {
             />
 
             <Input
-              label="Email Address"
+              label="Email address"
+              id="register-email"
               type="email"
+              autoComplete="email"
               placeholder="jane@university.edu"
               icon={Mail}
               value={email}
@@ -97,31 +85,13 @@ export const RegisterPage = () => {
               required
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
-                label="University"
-                type="text"
-                placeholder="Synapse University"
-                icon={GraduationCap}
-                value={university}
-                onChange={(e) => setUniversity(e.target.value)}
-              />
-
-              <Input
-                label="Course / Program"
-                type="text"
-                placeholder="Computer Science"
-                icon={BookOpen}
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="Password"
+                id="register-password"
                 type="password"
-                placeholder="••••••••"
+                autoComplete="new-password"
+                placeholder="At least 6 characters"
                 icon={Lock}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -129,34 +99,66 @@ export const RegisterPage = () => {
               />
 
               <Input
-                label="Confirm Password"
+                label="Confirm password"
+                id="register-confirm"
                 type="password"
-                placeholder="••••••••"
+                autoComplete="new-password"
+                placeholder="Repeat password"
                 icon={Lock}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                error={confirmPassword && password !== confirmPassword ? 'Passwords do not match' : undefined}
                 required
               />
             </div>
+          </fieldset>
 
-            <Button
-              type="submit"
-              variant="primary"
-              className="w-full mt-2"
-              isLoading={loading}
-            >
-              Create Account
-            </Button>
-          </form>
+          <fieldset className="space-y-4">
+            <legend className="inline-block px-2 py-0.5 mb-3 bg-sage border-2 border-black rounded-md text-[13px] font-bold uppercase tracking-wider text-black">
+              Studies <span className="normal-case tracking-normal font-normal">(optional)</span>
+            </legend>
+            <Input
+              label="University"
+              id="register-university"
+              type="text"
+              autoComplete="organization"
+              placeholder="Your university or college"
+              icon={GraduationCap}
+              value={university}
+              onChange={(e) => setUniversity(e.target.value)}
+            />
 
-          <div className="pt-4 border-t border-[#1f293d] text-center text-xs text-slate-400">
-            Already have an account?{' '}
-            <Link to="/login" className="text-blue-400 font-medium hover:underline">
-              Sign in
-            </Link>
-          </div>
-        </div>
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_8.5rem] gap-4">
+              <Input
+                label="Course or program"
+                id="register-course"
+                type="text"
+                placeholder="Computer Science"
+                icon={BookOpen}
+                value={course}
+                onChange={(e) => setCourse(e.target.value)}
+              />
+
+              <Select label="Year" id="register-year" value={year} onChange={(e) => setYear(e.target.value)}>
+                {[1, 2, 3, 4, 5, 6].map((y) => (
+                  <option key={y} value={y}>Year {y}</option>
+                ))}
+              </Select>
+            </div>
+          </fieldset>
+
+          <Button type="submit" variant="primary" size="lg" prominent className="w-full" isLoading={loading}>
+            Create account
+          </Button>
+        </form>
+
+        <p className="pt-6 border-t-2 border-black text-center text-[15px] text-black">
+          Already have an account?{' '}
+          <Link to="/login" className="font-bold text-black underline underline-offset-4 decoration-2 hover:bg-yellow rounded px-0.5">
+            Sign in
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthLayout>
   );
 };

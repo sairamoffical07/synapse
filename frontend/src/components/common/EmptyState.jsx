@@ -10,16 +10,16 @@ export const EmptyState = ({
   className = '',
 }) => {
   return (
-    <div className={`flex flex-col items-center justify-center p-8 text-center bg-[#111726]/60 border border-[#26334a]/60 rounded-xl ${className}`}>
+    <div className={`flex flex-col items-center justify-center px-6 py-12 text-center bg-white border-2 border-dashed border-black rounded-xl ${className}`}>
       {Icon && (
-        <div className="w-12 h-12 rounded-xl bg-[#182032] border border-[#26334a] flex items-center justify-center text-slate-400 mb-4">
-          <Icon className="w-6 h-6 stroke-[1.5]" />
+        <div className="w-14 h-14 rounded-lg bg-sage border-2 border-black flex items-center justify-center text-black mb-5 shadow-brut">
+          <Icon className="w-6 h-6" strokeWidth={2.25} aria-hidden="true" />
         </div>
       )}
-      <h3 className="text-base font-semibold text-slate-200 mb-1">{title}</h3>
-      <p className="text-xs text-slate-400 max-w-sm mb-5 leading-relaxed">{description}</p>
+      <h3 className="text-2xl text-black mb-1.5">{title}</h3>
+      <p className="text-[15px] text-gray-700 max-w-sm mb-6 leading-relaxed">{description}</p>
       {actionLabel && onAction && (
-        <Button variant="secondary" size="sm" onClick={onAction}>
+        <Button variant="primary" onClick={onAction}>
           {actionLabel}
         </Button>
       )}

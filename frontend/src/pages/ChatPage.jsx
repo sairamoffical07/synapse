@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, Trash2, AlertCircle } from 'lucide-react';
+import { ArrowUp, RotateCcw } from 'lucide-react';
 import { Button } from '../components/common/Button';
+import { Alert } from '../components/common/Alert';
 import { ChatMessage } from '../components/chat/ChatMessage';
 import { SuggestedPrompts } from '../components/chat/SuggestedPrompts';
 import { aiApi } from '../api/ai';
@@ -10,7 +11,7 @@ export const ChatPage = () => {
     {
       id: 'welcome',
       sender: 'ai',
-      text: 'Hello. I am Synapse AI. Ask me questions about your uploaded study materials, and I will generate grounded answers with precise document source citations.',
+      text: 'Hello, I’m Synapse. Ask me anything about the materials in your library and I’ll answer from those documents, citing the passages I used.',
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -18,9 +19,10 @@ export const ChatPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const chatEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, loading]);
 
   const handleSendMessage = async (queryText) => {
@@ -57,10 +59,12 @@ export const ChatPage = () => {
       setError(err.message || 'Error communicating with AI service.');
     } finally {
       setLoading(false);
+      inputRef.current?.focus();
     }
   };
 
   const handleClearChat = () => {
+    setError(null);
     setMessages([
       {
         id: 'welcome',
@@ -72,84 +76,82 @@ export const ChatPage = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6.5rem)] bg-[#111726] border border-[#26334a] rounded-xl overflow-hidden">
-      {/* Workspace Header */}
-      <div className="p-3.5 px-4 bg-[#0b0f17]/60 border-b border-[#26334a] flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-indigo-950/50 border border-indigo-800/40 flex items-center justify-center text-indigo-400">
-            <Bot className="w-4 h-4" />
-          </div>
-          <div>
-            <h2 className="text-xs font-semibold text-slate-200">Grounded Knowledge Workspace</h2>
-            <p className="text-[10px] text-slate-400">Gemini 1.5 Flash + ChromaDB Vector RAG</p>
-          </div>
+    // Fills the viewport below the header (4rem + 2px border), minus main's vertical padding.
+    <div className="flex flex-col gap-5 h-[calc(100dvh-8rem-2px)] min-h-[32rem] lg:h-[calc(100dvh-10rem-2px)]">
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0 space-y-2">
+          <p className="inline-block px-2 py-0.5 bg-sage border-2 border-black rounded-md text-[13px] font-bold uppercase tracking-wider text-black">
+            Ask Synapse
+          </p>
+          <h1 className="text-3xl sm:text-4xl leading-tight text-black">Questions about your materials</h1>
+          <p className="hidden sm:block text-[15px] text-gray-700">
+            Answers are grounded in your library and list the passages they draw from.
+          </p>
         </div>
 
-        <button
-          onClick={handleClearChat}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-[#182032] transition-colors"
-          title="Clear Conversation"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <Button variant="secondary" size="sm" icon={RotateCcw} onClick={handleClearChat} aria-label="Start a new conversation">
+          <span className="hidden sm:inline">New conversation</span>
+        </Button>
       </div>
 
-      {/* Messages Scroll Area */}
-      <div className="flex-1 p-4 md:p-6 overflow-y-auto space-y-4">
-        {messages.map((msg) => (
-          <ChatMessage key={msg.id} message={msg} />
-        ))}
+      <div className="flex-1 min-h-0 flex flex-col bg-white border-2 border-black rounded-xl shadow-brut-lg overflow-hidden">
+        {/* Conversation */}
+        <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 space-y-7" aria-live="polite" aria-relevant="additions">
+          {messages.map((msg) => (
+            <ChatMessage key={msg.id} message={msg} />
+          ))}
 
-        {loading && (
-          <ChatMessage
-            message={{
-              id: 'thinking',
-              sender: 'ai',
-              isThinking: true,
+          {loading && (
+            <ChatMessage
+              message={{
+                id: 'thinking',
+                sender: 'ai',
+                isThinking: true,
+              }}
+            />
+          )}
+
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Composer */}
+        <div className="px-3 pt-3 pb-4 sm:px-5 space-y-3 bg-yellow border-t-2 border-black">
+          {error && <Alert variant="error" onDismiss={() => setError(null)}>{error}</Alert>}
+
+          <SuggestedPrompts onSelectPrompt={(prompt) => handleSendMessage(prompt)} disabled={loading} />
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
             }}
-          />
-        )}
-
-        <div ref={chatEndRef} />
-      </div>
-
-      {/* Suggested Prompts & Input Area */}
-      <div className="p-3.5 bg-[#0b0f17]/80 border-t border-[#26334a] space-y-2">
-        {error && (
-          <div className="p-2.5 rounded-lg bg-red-950/40 border border-red-800/40 text-red-400 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <SuggestedPrompts onSelectPrompt={(prompt) => handleSendMessage(prompt)} />
-
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSendMessage();
-          }}
-          className="flex items-center gap-2"
-        >
-          <input
-            type="text"
-            placeholder="Ask a question about your uploaded materials..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={loading}
-            className="flex-1 bg-[#111726] border border-[#26334a] focus:border-blue-500/60 rounded-xl px-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 outline-none transition-all"
-          />
-
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={!input.trim() || loading}
-            isLoading={loading}
-            icon={Send}
+            className="flex items-center gap-2 p-1.5 pl-4 bg-white border-2 border-black rounded-lg focus-within:shadow-brut transition-shadow"
           >
-            Send
-          </Button>
-        </form>
+            <label htmlFor="chat-input" className="sr-only">Ask a question about your materials</label>
+            <input
+              id="chat-input"
+              ref={inputRef}
+              type="text"
+              autoComplete="off"
+              placeholder="Ask a question about your materials…"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={loading}
+              className="flex-1 min-w-0 h-10 bg-transparent text-base font-medium text-black outline-none focus-visible:outline-none disabled:text-gray-400"
+            />
+
+            <Button
+              type="submit"
+              variant="dark"
+              disabled={!input.trim() || loading}
+              isLoading={loading}
+              icon={ArrowUp}
+              aria-label="Send question"
+            >
+              <span className="hidden sm:inline">Send</span>
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

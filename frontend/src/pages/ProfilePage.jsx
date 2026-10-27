@@ -1,70 +1,70 @@
 import React from 'react';
-import { User, Mail, GraduationCap, BookOpen, ShieldCheck, LogOut } from 'lucide-react';
+import { Mail, ShieldCheck, Lock, LogOut } from 'lucide-react';
 import { Button } from '../components/common/Button';
+import { PageHeader } from '../components/common/PageHeader';
 import { useAuth } from '../context/AuthContext';
 
 export const ProfilePage = () => {
   const { user, logout } = useAuth();
 
+  const facts = [
+    {
+      icon: ShieldCheck,
+      title: 'Your library is private',
+      text: 'Uploaded materials and their indexed passages are scoped to your account. Answers, quizzes and flashcards only draw on your own documents.',
+    },
+    {
+      icon: Lock,
+      title: 'Token-based sign-in',
+      text: 'Your session uses a signed token stored in this browser. Signing out removes it from this device.',
+    },
+  ];
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="space-y-1">
-        <h2 className="text-base font-bold text-slate-100">Student Profile</h2>
-        <p className="text-xs text-slate-400">Account metadata and workspace authentication details.</p>
-      </div>
+    <div className="max-w-3xl space-y-10">
+      <PageHeader
+        eyebrow="Account"
+        title="Your profile"
+        description="The account you’re signed in with and how Synapse handles your materials."
+      />
 
-      <div className="bg-[#111726] border border-[#26334a] rounded-xl p-6 space-y-6">
-        <div className="flex items-center gap-4 pb-6 border-b border-[#1f293d]">
-          <div className="w-14 h-14 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-lg font-bold text-blue-400">
-            {user?.email ? user.email.charAt(0).toUpperCase() : 'S'}
-          </div>
-
-          <div className="space-y-0.5">
-            <h3 className="text-sm font-semibold text-slate-100">{user?.name || 'Student Account'}</h3>
-            <p className="text-xs text-slate-400 flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-slate-500" />
-              {user?.email || 'authenticated@synapse.edu'}
-            </p>
-          </div>
+      <section
+        className="flex items-center gap-4 sm:gap-5 p-5 sm:p-6 bg-yellow dot-grid border-2 border-black rounded-xl shadow-brut-lg"
+        aria-labelledby="profile-account"
+      >
+        <div className="w-16 h-16 rounded-lg bg-black text-yellow flex items-center justify-center font-display text-3xl font-extrabold shrink-0">
+          {user?.email ? user.email.charAt(0).toUpperCase() : 'S'}
         </div>
-
-        <div className="space-y-3">
-          <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-            Workspace Configuration
-          </h4>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="p-3 rounded-lg bg-[#182032] border border-[#26334a] flex items-center gap-2.5">
-              <GraduationCap className="w-4 h-4 text-blue-400 shrink-0" />
-              <div>
-                <span className="block text-[10px] text-slate-400">University</span>
-                <span className="font-medium text-slate-200">Synapse Academic Network</span>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-lg bg-[#182032] border border-[#26334a] flex items-center gap-2.5">
-              <BookOpen className="w-4 h-4 text-indigo-400 shrink-0" />
-              <div>
-                <span className="block text-[10px] text-slate-400">Status</span>
-                <span className="font-medium text-slate-200">Active Student Member</span>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-lg bg-[#182032] border border-[#26334a] flex items-center gap-2.5 sm:col-span-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <div>
-                <span className="block text-[10px] text-slate-400">Security Mode</span>
-                <span className="font-medium text-slate-200">JWT Authenticated • User-Isolated ChromaDB Vector Scope</span>
-              </div>
-            </div>
-          </div>
+        <div className="min-w-0 space-y-1">
+          <h2 id="profile-account" className="text-3xl text-black truncate">
+            {user?.name || 'Student account'}
+          </h2>
+          <p className="text-[15px] font-bold text-black flex items-center gap-1.5 min-w-0">
+            <Mail className="w-4 h-4 shrink-0" strokeWidth={2.5} aria-hidden="true" />
+            <span className="truncate">{user?.email}</span>
+          </p>
         </div>
+      </section>
 
-        <div className="pt-4 border-t border-[#1f293d] flex justify-end">
-          <Button variant="danger" size="sm" icon={LogOut} onClick={logout}>
-            Sign Out of Synapse
-          </Button>
-        </div>
+      <section className="space-y-5" aria-labelledby="profile-privacy">
+        <h2 id="profile-privacy" className="text-3xl text-black">Privacy &amp; security</h2>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {facts.map(({ icon: Icon, title, text }) => (
+            <li key={title} className="group p-5 bg-white border-2 border-black rounded-xl shadow-brut space-y-3">
+              <span className="w-11 h-11 inline-flex items-center justify-center rounded-lg bg-sage border-2 border-black text-black group-hover:bg-yellow transition-colors">
+                <Icon className="w-5 h-5" strokeWidth={2.25} aria-hidden="true" />
+              </span>
+              <p className="font-display text-xl font-extrabold text-black">{title}</p>
+              <p className="text-[15px] text-gray-700 leading-relaxed">{text}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <div className="flex justify-end">
+        <Button variant="destructive" icon={LogOut} onClick={logout}>
+          Sign out of Synapse
+        </Button>
       </div>
     </div>
   );

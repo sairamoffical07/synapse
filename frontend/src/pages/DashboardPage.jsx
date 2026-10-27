@@ -1,19 +1,53 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   UploadCloud,
-  Bot,
-  BrainCircuit,
+  MessageSquareText,
   FileText,
   ArrowRight,
-  Sparkles,
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
+import { PageHeader } from '../components/common/PageHeader';
 import { MaterialRow } from '../components/materials/MaterialRow';
 import { EmptyState } from '../components/common/EmptyState';
 import { TableRowSkeleton } from '../components/common/Skeleton';
 import { materialsApi } from '../api/materials';
 import { useAuth } from '../context/AuthContext';
+
+const greeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+};
+
+// The confirmed Synapse study loop: upload -> ask -> practice.
+const workflow = [
+  {
+    step: '1',
+    title: 'Build your library',
+    description: 'Upload lecture notes, textbook chapters and syllabus PDFs. Each one is analyzed and indexed.',
+    to: '/materials',
+    cta: 'Open library',
+    marker: 'border-sage text-sage',
+  },
+  {
+    step: '2',
+    title: 'Ask your materials',
+    description: 'Ask questions in plain language and get answers grounded in your documents, with sources.',
+    to: '/chat',
+    cta: 'Ask Synapse',
+    marker: 'border-yellow text-yellow',
+  },
+  {
+    step: '3',
+    title: 'Practice and recall',
+    description: 'Generate a quiz or a flashcard deck on any topic you have studied, then test yourself.',
+    to: '/practice',
+    cta: 'Start practicing',
+    marker: 'border-white text-white',
+  },
+];
 
 export const DashboardPage = () => {
   const { user } = useAuth();
@@ -39,110 +73,95 @@ export const DashboardPage = () => {
   };
 
   const completedCount = materials.filter((m) => m.processingStatus === 'COMPLETED').length;
+  const failedCount = materials.filter((m) => m.processingStatus === 'FAILED').length;
   const recentMaterials = materials.slice(0, 3);
 
+  // Library facts derived from the user's real materials.
+  const stats = [
+    { label: 'Materials in library', value: materials.length, surface: 'bg-yellow' },
+    { label: 'Ready to query', value: completedCount, surface: 'bg-sage' },
+    { label: 'Failed to process', value: failedCount, surface: 'bg-white' },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Overview Header */}
-      <div className="p-6 rounded-xl bg-gradient-to-r from-[#111726] to-[#182032] border border-[#26334a] flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-semibold text-blue-400 uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Academic Knowledge Workspace</span>
-          </div>
-          <h2 className="text-lg font-bold text-slate-100">
-            Welcome, {user?.name || 'Student'}
-          </h2>
-          <p className="text-xs text-slate-400 max-w-xl">
-            Upload notes, lecture materials, and syllabus PDFs to query your knowledge graph with grounded AI.
-          </p>
-        </div>
+    <div className="space-y-12 lg:space-y-16">
+      <PageHeader
+        eyebrow={greeting()}
+        title={`Welcome back, ${user?.name || 'Student'}`}
+        description="Your study materials, connected. Add documents, ask questions about them, and test what you know."
+        actions={
+          <>
+            <Button variant="secondary" icon={MessageSquareText} onClick={() => navigate('/chat')}>
+              Ask Synapse
+            </Button>
+            <Button variant="primary" prominent icon={UploadCloud} onClick={() => navigate('/materials')}>
+              Upload material
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-2 shrink-0">
-          <Button variant="primary" icon={UploadCloud} onClick={() => navigate('/materials')}>
-            Upload Material
-          </Button>
-          <Button variant="secondary" icon={Bot} onClick={() => navigate('/chat')}>
-            Ask Synapse
-          </Button>
-        </div>
-      </div>
+      <section aria-label="Library summary">
+        <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+          {stats.map((s) => (
+            <div key={s.label} className={`${s.surface} border-2 border-black rounded-xl shadow-brut px-5 py-4 flex sm:flex-col items-center sm:items-start justify-between gap-2`}>
+              <dt className="text-[15px] font-bold text-black">{s.label}</dt>
+              <dd className="font-display text-5xl font-extrabold text-black tabular-nums leading-none">
+                {loading ? '–' : s.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
-      {/* Quick Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div
-          onClick={() => navigate('/materials')}
-          className="p-5 rounded-xl bg-[#111726] border border-[#26334a] hover:border-blue-500/40 transition-all cursor-pointer group space-y-3"
-        >
-          <div className="w-9 h-9 rounded-lg bg-[#182032] border border-[#26334a] flex items-center justify-center text-blue-400 group-hover:bg-blue-600/10 group-hover:border-blue-500/30 transition-colors">
-            <FileText className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-xs font-semibold text-slate-200 group-hover:text-blue-400 transition-colors">
-              Study Materials Library
-            </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              {materials.length} {materials.length === 1 ? 'material' : 'materials'} indexed in workspace
-            </p>
-          </div>
-        </div>
+      {/* How it works: three-step horizontal flow on charcoal */}
+      <section aria-labelledby="workflow-heading" className="on-dark bg-charcoal text-white border-2 border-black rounded-xl shadow-brut-lg px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
+        <h2 id="workflow-heading" className="text-3xl sm:text-4xl text-white mb-8 lg:mb-10">How Synapse works</h2>
 
-        <div
-          onClick={() => navigate('/chat')}
-          className="p-5 rounded-xl bg-[#111726] border border-[#26334a] hover:border-blue-500/40 transition-all cursor-pointer group space-y-3"
-        >
-          <div className="w-9 h-9 rounded-lg bg-[#182032] border border-[#26334a] flex items-center justify-center text-indigo-400 group-hover:bg-indigo-600/10 group-hover:border-indigo-500/30 transition-colors">
-            <Bot className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-xs font-semibold text-slate-200 group-hover:text-indigo-400 transition-colors">
-              AI Assistant (RAG Chat)
-            </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Grounded AI answers with precise document source citations
-            </p>
-          </div>
-        </div>
+        <ol className="relative grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6">
+          {/* Connector line: vertical on mobile, horizontal from md up */}
+          <span aria-hidden="true" className="absolute left-7 top-14 bottom-14 w-0.5 bg-gray-700 md:hidden" />
+          <span aria-hidden="true" className="hidden md:block absolute top-7 left-[calc(16.66%+1.75rem)] right-[calc(16.66%+1.75rem)] h-0.5 bg-gray-700" />
 
-        <div
-          onClick={() => navigate('/practice')}
-          className="p-5 rounded-xl bg-[#111726] border border-[#26334a] hover:border-blue-500/40 transition-all cursor-pointer group space-y-3"
-        >
-          <div className="w-9 h-9 rounded-lg bg-[#182032] border border-[#26334a] flex items-center justify-center text-cyan-400 group-hover:bg-cyan-600/10 group-hover:border-cyan-500/30 transition-colors">
-            <BrainCircuit className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-xs font-semibold text-slate-200 group-hover:text-cyan-400 transition-colors">
-              Active Revision & Practice
-            </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Generate multiple-choice quizzes and digital flashcards
-            </p>
-          </div>
-        </div>
-      </div>
+          {workflow.map(({ step, title, description, to, cta, marker }) => (
+            <li key={to} className="relative flex md:flex-col md:items-center md:text-center gap-5 md:gap-4">
+              <span className={`relative z-10 w-14 h-14 shrink-0 inline-flex items-center justify-center rounded-lg border-[3px] bg-charcoal font-display text-3xl font-extrabold ${marker}`}>
+                {step}
+              </span>
+              <div className="space-y-2 md:max-w-xs">
+                <h3 className="text-2xl text-white">{title}</h3>
+                <p className="text-[15px] text-sage leading-relaxed">{description}</p>
+                <Link
+                  to={to}
+                  className="inline-flex items-center gap-1.5 pt-1 text-[15px] font-bold text-yellow underline underline-offset-4 decoration-2 hover:decoration-white hover:text-white rounded"
+                >
+                  {cta}
+                  <ArrowRight className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
+                </Link>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
 
-      {/* Recent Materials Section */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
-            Recent Study Materials
-          </h3>
+      <section aria-labelledby="recent-heading" className="space-y-5">
+        <div className="flex items-end justify-between gap-3">
+          <h2 id="recent-heading" className="text-3xl text-black">Recently added</h2>
           {materials.length > 0 && (
-            <button
-              onClick={() => navigate('/materials')}
-              className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+            <Link
+              to="/materials"
+              className="inline-flex items-center gap-1 text-[15px] font-bold text-black underline underline-offset-4 decoration-2 hover:bg-yellow rounded px-1"
             >
-              <span>View All ({materials.length})</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+              View library ({materials.length})
+              <ArrowRight className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
+            </Link>
           )}
         </div>
 
         {loading ? (
           <TableRowSkeleton rows={3} />
         ) : recentMaterials.length > 0 ? (
-          <div className="space-y-2.5">
+          <ul className="bg-white border-2 border-black rounded-xl shadow-brut divide-y-2 divide-black">
             {recentMaterials.map((mat) => (
               <MaterialRow
                 key={mat.id}
@@ -158,17 +177,17 @@ export const DashboardPage = () => {
                 }}
               />
             ))}
-          </div>
+          </ul>
         ) : (
           <EmptyState
             icon={FileText}
-            title="No study materials uploaded yet"
-            description="Upload your lecture notes or textbook PDFs to build your personalized AI knowledge base."
-            actionLabel="Upload First Material"
+            title="Your library is empty"
+            description="Upload your lecture notes or textbook PDFs to build a personal knowledge base you can question."
+            actionLabel="Upload your first material"
             onAction={() => navigate('/materials')}
           />
         )}
-      </div>
+      </section>
     </div>
   );
 };

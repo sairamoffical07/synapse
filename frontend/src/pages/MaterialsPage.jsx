@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Search, RefreshCw, AlertCircle } from 'lucide-react';
+import { FileText, Search, RefreshCw } from 'lucide-react';
 import { UploadDropzone } from '../components/materials/UploadDropzone';
 import { MaterialRow } from '../components/materials/MaterialRow';
 import { EmptyState } from '../components/common/EmptyState';
 import { TableRowSkeleton } from '../components/common/Skeleton';
 import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
+import { PageHeader } from '../components/common/PageHeader';
+import { Alert } from '../components/common/Alert';
 import { materialsApi } from '../api/materials';
 
 export const MaterialsPage = () => {
@@ -16,6 +18,7 @@ export const MaterialsPage = () => {
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   useEffect(() => {
     fetchMaterials();
@@ -40,10 +43,12 @@ export const MaterialsPage = () => {
   const handleUpload = async (file) => {
     setUploading(true);
     setError(null);
+    setNotice(null);
     try {
       const res = await materialsApi.uploadMaterial(file);
       if (res.success) {
         await fetchMaterials();
+        setNotice(`“${file.name}” was added to your library.`);
       } else {
         setError(res.message || 'Failed to upload study material.');
       }
@@ -55,6 +60,7 @@ export const MaterialsPage = () => {
   };
 
   const handleDelete = async (id) => {
+    setNotice(null);
     try {
       const res = await materialsApi.deleteMaterial(id);
       if (res.success) {
@@ -73,48 +79,37 @@ export const MaterialsPage = () => {
   });
 
   return (
-    <div className="space-y-6">
-      {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h2 className="text-base font-bold text-slate-100">Study Library</h2>
-          <p className="text-xs text-slate-400">
-            Manage your uploaded textbooks, syllabus files, and PDF lecture notes.
-          </p>
-        </div>
+    <div className="space-y-10">
+      <PageHeader
+        eyebrow="Library"
+        title="Study materials"
+        description="Everything Synapse knows comes from the documents you add here. Each PDF is analyzed and indexed so you can ask questions about it."
+        actions={
+          <Button variant="outline" size="sm" icon={RefreshCw} onClick={fetchMaterials} disabled={loading}>
+            Refresh
+          </Button>
+        }
+      />
 
-        <Button
-          variant="outline"
-          size="sm"
-          icon={RefreshCw}
-          onClick={fetchMaterials}
-          disabled={loading}
-        >
-          Refresh
-        </Button>
-      </div>
-
-      {/* Upload Dropzone */}
       <UploadDropzone onUpload={handleUpload} isUploading={uploading} />
 
-      {error && (
-        <div className="p-3 rounded-lg bg-red-950/40 border border-red-800/40 text-red-400 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <Alert variant="error" onDismiss={() => setError(null)}>{error}</Alert>}
+      {notice && <Alert variant="success" onDismiss={() => setNotice(null)}>{notice}</Alert>}
 
-      {/* Library Table / List */}
-      <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#1f293d]">
-          <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-            Uploaded Documents ({materials.length})
-          </h3>
+      <section aria-labelledby="library-heading" className="space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <h2 id="library-heading" className="text-3xl text-black">
+            Your documents
+            <span className="ml-2 align-middle inline-flex items-center justify-center min-w-8 h-8 px-2 rounded-md border-2 border-black bg-sage font-sans text-base font-bold tabular-nums">{materials.length}</span>
+          </h2>
 
           {materials.length > 0 && (
-            <div className="w-full sm:w-64">
+            <div className="w-full sm:w-72">
               <Input
-                placeholder="Search materials..."
+                id="material-search"
+                type="search"
+                aria-label="Search materials by file name"
+                placeholder="Search by file name"
                 icon={Search}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -126,7 +121,7 @@ export const MaterialsPage = () => {
         {loading ? (
           <TableRowSkeleton rows={4} />
         ) : filteredMaterials.length > 0 ? (
-          <div className="space-y-2.5">
+          <ul className="bg-white border-2 border-black rounded-xl shadow-brut divide-y-2 divide-black">
             {filteredMaterials.map((material) => (
               <MaterialRow
                 key={material.id}
@@ -135,23 +130,23 @@ export const MaterialsPage = () => {
                 onDelete={handleDelete}
               />
             ))}
-          </div>
+          </ul>
         ) : searchQuery ? (
           <EmptyState
             icon={Search}
-            title="No matching materials found"
-            description={`No document matching "${searchQuery}" was found in your study library.`}
-            actionLabel="Clear Search"
+            title="No matching materials"
+            description={`Nothing in your library matches “${searchQuery}”.`}
+            actionLabel="Clear search"
             onAction={() => setSearchQuery('')}
           />
         ) : (
           <EmptyState
             icon={FileText}
-            title="Your study library is empty"
-            description="Upload your first academic PDF document to begin building your grounded knowledge base."
+            title="Your library is empty"
+            description="Upload your first academic PDF above to start building your knowledge base."
           />
         )}
-      </div>
+      </section>
     </div>
   );
 };

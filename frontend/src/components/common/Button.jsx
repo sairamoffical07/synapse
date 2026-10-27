@@ -5,6 +5,7 @@ export const Button = ({
   children,
   variant = 'primary',
   size = 'md',
+  prominent = false,
   isLoading = false,
   disabled = false,
   type = 'button',
@@ -13,36 +14,50 @@ export const Button = ({
   icon: Icon,
   ...props
 }) => {
-  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-150 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed select-none';
+  const baseStyles =
+    'inline-flex items-center justify-center font-sans font-bold rounded-lg border-2 select-none whitespace-nowrap';
+
+  // Raised variants carry a hard shadow and the press interaction; flat ones change fill on hover.
+  const raised = prominent ? 'shadow-brut-lg press-lg' : 'shadow-brut press';
 
   const variants = {
-    primary: 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm border border-blue-500/30 active:bg-blue-700',
-    secondary: 'bg-[#182032] hover:bg-[#1f293d] text-slate-200 border border-[#26334a] active:bg-[#111726]',
-    outline: 'bg-transparent border border-[#26334a] hover:border-[#3b4d6b] text-slate-300 hover:text-white',
-    ghost: 'bg-transparent hover:bg-[#182032] text-slate-400 hover:text-slate-200',
-    danger: 'bg-red-950/40 hover:bg-red-900/50 text-red-400 border border-red-800/40 hover:text-red-300',
+    primary: `bg-yellow border-black text-black ${raised}`,
+    secondary: `bg-white border-black text-black hover:bg-sage ${raised}`,
+    dark: `bg-charcoal border-black text-white hover:bg-black ${raised}`,
+    outline: 'bg-white border-black text-black hover:bg-sage transition-colors',
+    ghost: 'bg-transparent border-transparent text-black hover:border-black hover:bg-white transition-colors',
+    danger: 'bg-white border-black text-black hover:bg-charcoal hover:text-white transition-colors',
+    destructive: `bg-charcoal border-black text-white hover:bg-black ${raised}`,
   };
 
   const sizes = {
-    sm: 'text-xs px-3 py-1.5 gap-1.5',
-    md: 'text-sm px-4 py-2 gap-2',
-    lg: 'text-base px-5 py-2.5 gap-2.5',
+    sm: 'text-sm h-9 px-3 gap-1.5',
+    md: 'text-[15px] h-11 px-4 gap-2',
+    lg: 'text-base h-12 px-6 gap-2',
   };
+
+  const isDisabled = disabled || isLoading;
+  const stateStyles = isLoading
+    ? 'cursor-progress'
+    : disabled
+      ? '!bg-gray-100 !text-gray-400 !border-gray-400 !shadow-none cursor-not-allowed'
+      : 'cursor-pointer';
 
   return (
     <button
       type={type}
-      disabled={disabled || isLoading}
+      disabled={isDisabled}
+      aria-busy={isLoading || undefined}
       onClick={onClick}
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${stateStyles} ${className}`}
       {...props}
     >
       {isLoading ? (
-        <Loader2 className="w-4 h-4 animate-spin text-current" />
+        <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden="true" />
       ) : Icon ? (
-        <Icon className="w-4 h-4 text-current" />
+        <Icon className="w-4 h-4 shrink-0" strokeWidth={2.5} aria-hidden="true" />
       ) : null}
-      <span>{children}</span>
+      {children != null && children !== false && <span className="inline-flex items-center">{children}</span>}
     </button>
   );
 };

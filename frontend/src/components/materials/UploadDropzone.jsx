@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, FileText, AlertCircle } from 'lucide-react';
+import { UploadCloud } from 'lucide-react';
 import { Button } from '../common/Button';
+import { Alert } from '../common/Alert';
 
 export const UploadDropzone = ({ onUpload, isUploading }) => {
   const [dragActive, setDragActive] = useState(false);
@@ -38,6 +39,7 @@ export const UploadDropzone = ({ onUpload, isUploading }) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
+    if (isUploading) return;
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       validateAndProcess(e.dataTransfer.files[0]);
@@ -49,63 +51,65 @@ export const UploadDropzone = ({ onUpload, isUploading }) => {
     if (e.target.files && e.target.files[0]) {
       validateAndProcess(e.target.files[0]);
     }
+    // Allow re-selecting the same file after an error.
+    e.target.value = '';
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-3">
       <div
         onDragEnter={handleDrag}
         onDragOver={handleDrag}
         onDragLeave={handleDrag}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`relative border border-dashed rounded-xl p-6 transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-3 ${
-          dragActive
-            ? 'border-blue-500 bg-blue-950/20'
-            : 'border-[#26334a] hover:border-[#3b4d6b] bg-[#111726]/40 hover:bg-[#111726]/80'
-        }`}
+        onClick={() => !isUploading && fileInputRef.current?.click()}
+        className={`relative rounded-xl border-2 border-dashed border-black px-5 py-7 sm:px-7 transition-colors flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left ${
+          dragActive ? 'bg-yellow dot-grid border-solid shadow-brut' : 'bg-white hover:bg-yellow hover:dot-grid'
+        } ${isUploading ? 'cursor-progress' : 'cursor-pointer'}`}
       >
         <input
           ref={fileInputRef}
           type="file"
           accept=".pdf,application/pdf"
           onChange={handleChange}
-          className="hidden"
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden="true"
           disabled={isUploading}
         />
 
-        <div className="w-10 h-10 rounded-lg bg-[#182032] border border-[#26334a] flex items-center justify-center text-blue-400">
-          <UploadCloud className="w-5 h-5" />
+        <div className="w-14 h-14 rounded-lg bg-sage border-2 border-black text-black flex items-center justify-center shrink-0">
+          <UploadCloud className="w-6 h-6" strokeWidth={2.25} aria-hidden="true" />
         </div>
 
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-slate-200">
-            Click to upload or drag & drop PDF materials
+        <div className="flex-1 min-w-0 space-y-1" aria-live="polite">
+          <p className="font-display text-xl sm:text-2xl font-extrabold text-black">
+            {isUploading ? 'Analyzing your notes…' : 'Drop a PDF here, or choose a file'}
           </p>
-          <p className="text-[11px] text-slate-500">
-            PDF lecture notes, textbooks, and syllabus files (Max 50MB)
+          <p className="text-[15px] text-gray-700">
+            {isUploading
+              ? 'Extracting text and indexing passages. Long documents can take a moment.'
+              : 'Lecture notes, textbook chapters, papers and syllabi. Up to 50 MB.'}
           </p>
         </div>
 
         <Button
-          variant="secondary"
-          size="sm"
+          variant="primary"
+          prominent
           isLoading={isUploading}
-          disabled={isUploading}
           onClick={(e) => {
             e.stopPropagation();
             fileInputRef.current?.click();
           }}
         >
-          {isUploading ? 'Analyzing & Indexing PDF...' : 'Select PDF File'}
+          {isUploading ? 'Uploading…' : 'Choose PDF'}
         </Button>
       </div>
 
       {error && (
-        <div className="mt-2.5 p-2.5 rounded-lg bg-red-950/30 border border-red-800/40 text-red-400 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
-        </div>
+        <Alert variant="error" onDismiss={() => setError(null)}>
+          {error}
+        </Alert>
       )}
     </div>
   );
