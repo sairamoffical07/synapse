@@ -16,7 +16,7 @@ public class LoginRequest {
     }
 
     public LoginRequest(String email, String password) {
-        this.email = email;
+        this.email = email == null ? null : email.trim();
         this.password = password;
     }
 
@@ -25,7 +25,8 @@ public class LoginRequest {
     }
 
     public void setEmail(String email) {
-        this.email = email;
+        // Trim before validation so stray spaces from autofill do not fail @Email
+        this.email = email == null ? null : email.trim();
     }
 
     public String getPassword() {

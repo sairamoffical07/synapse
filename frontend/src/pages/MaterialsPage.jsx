@@ -41,6 +41,7 @@ export const MaterialsPage = () => {
   };
 
   const handleUpload = async (file) => {
+    if (uploading) return;
     setUploading(true);
     setError(null);
     setNotice(null);

@@ -6,17 +6,21 @@ import { Input } from '../components/common/Input';
 import { Alert } from '../components/common/Alert';
 import { AuthLayout } from '../components/layout/AuthLayout';
 import { useAuth } from '../context/AuthContext';
+import { takeSessionNotice } from '../api/client';
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  // Why the user was sent here (expired or invalid session), shown once
+  const [notice, setNotice] = useState(takeSessionNotice);
   const { login, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setNotice(null);
 
     const res = await login(email, password);
     if (res.success) {
@@ -34,6 +38,7 @@ export const LoginPage = () => {
           <p className="text-base text-gray-700">Sign in to continue with your materials and study sessions.</p>
         </div>
 
+        {notice && !error && <Alert variant="info">{notice}</Alert>}
         {error && <Alert variant="error">{error}</Alert>}
 
         <form onSubmit={handleSubmit} className="space-y-4">

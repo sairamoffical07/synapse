@@ -28,7 +28,7 @@ public class RegisterRequest {
 
     public RegisterRequest(String fullName, String email, String password, String university, String course, Integer year) {
         this.fullName = fullName;
-        this.email = email;
+        this.email = email == null ? null : email.trim();
         this.password = password;
         this.university = university;
         this.course = course;
@@ -48,7 +48,8 @@ public class RegisterRequest {
     }
 
     public void setEmail(String email) {
-        this.email = email;
+        // Trim before validation so stray spaces from autofill do not fail @Email
+        this.email = email == null ? null : email.trim();
     }
 
     public String getPassword() {

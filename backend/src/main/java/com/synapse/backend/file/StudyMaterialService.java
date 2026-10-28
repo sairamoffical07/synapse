@@ -90,7 +90,7 @@ public class StudyMaterialService {
 
             List<String> rawChunks = textChunkingService.splitIntoChunks(extractedText);
             if (rawChunks.isEmpty()) {
-                throw new StudyMaterialProcessingException("Extracted document text produced zero chunks");
+                throw new StudyMaterialProcessingException("No readable text was found in this PDF. Scanned or image-only PDFs are not supported yet.");
             }
 
             List<DocumentChunk> persistedChunks = documentChunkService.saveChunks(savedMaterial, rawChunks);
@@ -146,6 +146,9 @@ public class StudyMaterialService {
 
             if (ex instanceof AIServiceException aiException) {
                 throw aiException;
+            }
+            if (ex instanceof StudyMaterialProcessingException processingException) {
+                throw processingException;
             }
             throw new StudyMaterialProcessingException("PDF processing failed. Check that the PDF is readable and try again.", ex);
         }
@@ -209,6 +212,15 @@ public class StudyMaterialService {
         String filename = file.getOriginalFilename();
         if (filename == null || !filename.toLowerCase().endsWith(".pdf")) {
             throw new StudyMaterialProcessingException("Only PDF files are currently supported for upload");
+        }
+        // Reject renamed non-PDF files before storing them: real PDFs start with "%PDF-"
+        try (InputStream in = file.getInputStream()) {
+            byte[] header = in.readNBytes(5);
+            if (!"%PDF-".equals(new String(header, java.nio.charset.StandardCharsets.US_ASCII))) {
+                throw new StudyMaterialProcessingException("This file is not a valid PDF.");
+            }
+        } catch (IOException ex) {
+            throw new StudyMaterialProcessingException("The uploaded file could not be read.", ex);
         }
     }
 
