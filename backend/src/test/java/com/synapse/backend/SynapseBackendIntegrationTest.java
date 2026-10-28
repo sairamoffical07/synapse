@@ -105,6 +105,15 @@ public class SynapseBackendIntegrationTest {
     }
 
     @Test
+    void testInvalidCredentialsReturn401() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("missing@synapse.edu", "wrong-password"))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Invalid email or password."));
+    }
+
+    @Test
     void testCorsAllowsConfiguredOriginsAndRejectsUnknownOrigin() throws Exception {
         mockMvc.perform(options("/api/study-materials")
                         .header("Origin", "https://synapse-academic.vercel.app")

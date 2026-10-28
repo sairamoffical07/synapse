@@ -8,6 +8,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -51,7 +52,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleAuthentication(AuthenticationException ex) {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error("Your sign-in session is invalid. Please sign in again."));
+                .body(ApiResponse.error("Invalid email or password."));
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Void>> handleResponseStatus(ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        String message = status == HttpStatus.CONFLICT ? "That email is already registered." : "Request could not be completed.";
+        return ResponseEntity.status(status).body(ApiResponse.error(message));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
