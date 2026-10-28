@@ -20,15 +20,15 @@ export const UploadDropzone = ({ onUpload, isUploading }) => {
 
   const validateAndProcess = (file) => {
     setError(null);
-    if (!file) return;
+    if (!file || isUploading) return;
 
-    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       setError('Only PDF documents are supported for knowledge extraction.');
       return;
     }
 
     if (file.size > 50 * 1024 * 1024) {
-      setError('File size exceeds the 50MB maximum limit.');
+      setError('That file is too large. PDFs must be 50 MB or smaller.');
       return;
     }
 

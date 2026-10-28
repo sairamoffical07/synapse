@@ -24,26 +24,34 @@ public class UserService {
     }
 
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String email = normalizeEmail(request.getEmail());
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.CONFLICT, "Email already registered");
         }
 
         User user = new User();
-        user.setFullName(request.getFullName());
-        user.setEmail(request.getEmail());
+        user.setFullName(request.getFullName().trim());
+        user.setEmail(email);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setUniversity(request.getUniversity());
         user.setCourse(request.getCourse());
         user.setYear(request.getYear());
 
-        userRepository.save(user);
+        try {
+            userRepository.saveAndFlush(user);
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            // Concurrent registration with the same email hit the unique constraint
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.CONFLICT, "Email already registered");
+        }
 
         return new AuthResponse(true, "User registered successfully");
     }
 
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        // Accounts created before emails were normalized may be stored with mixed case
+        User user = userRepository.findFirstByEmailIgnoreCase(normalizeEmail(request.getEmail()))
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -57,5 +65,9 @@ public class UserService {
                 "Login successful",
                 token
         );
+    }
+
+    private static String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(java.util.Locale.ROOT);
     }
 }

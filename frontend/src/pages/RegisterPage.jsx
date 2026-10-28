@@ -23,6 +23,8 @@ export const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Keep the form locked during the post-success redirect so a second click can't re-submit
+    if (loading || successMsg) return;
     setError('');
     setSuccessMsg('');
 
@@ -31,8 +33,9 @@ export const RegisterPage = () => {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    // Matches the backend's @Size(min = 8) rule on RegisterRequest
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
       return;
     }
 
@@ -91,7 +94,7 @@ export const RegisterPage = () => {
                 id="register-password"
                 type="password"
                 autoComplete="new-password"
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 icon={Lock}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -147,7 +150,7 @@ export const RegisterPage = () => {
             </div>
           </fieldset>
 
-          <Button type="submit" variant="primary" size="lg" prominent className="w-full" isLoading={loading}>
+          <Button type="submit" variant="primary" size="lg" prominent className="w-full" isLoading={loading} disabled={Boolean(successMsg)}>
             Create account
           </Button>
         </form>

@@ -1,21 +1,42 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authApi } from '../api/auth';
+import { TOKEN_KEY, USER_KEY, clearSession } from '../api/client';
 
 const AuthContext = createContext(null);
 
+// Reads the JWT's exp claim (no signature check; the server does that) so a stale token
+// is dropped on load instead of failing the first request after a long absence.
+const isTokenExpired = (token) => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.exp === 'number' && payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+};
+
+const readSavedToken = () => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token && isTokenExpired(token)) {
+    clearSession('Your session has expired. Please sign in again.');
+    return null;
+  }
+  return token;
+};
+
 const readSavedUser = () => {
   try {
-    const saved = localStorage.getItem('synapse_user');
+    const saved = localStorage.getItem(USER_KEY);
     return saved ? JSON.parse(saved) : null;
   } catch {
-    localStorage.removeItem('synapse_user');
+    localStorage.removeItem(USER_KEY);
     return null;
   }
 };
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => localStorage.getItem('synapse_token'));
-  const [user, setUser] = useState(readSavedUser);
+  const [token, setToken] = useState(readSavedToken);
+  const [user, setUser] = useState(() => (readSavedToken() ? readSavedUser() : null));
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,12 +55,13 @@ export const AuthProvider = ({ children }) => {
       const response = await authApi.login({ email, password });
       if (response.success && response.token) {
         setToken(response.token);
-        localStorage.setItem('synapse_token', response.token);
+        localStorage.setItem(TOKEN_KEY, response.token);
 
         // Save email & display user info
-        const userData = { email, name: email.split('@')[0] };
+        const normalizedEmail = email.trim().toLowerCase();
+        const userData = { email: normalizedEmail, name: normalizedEmail.split('@')[0] };
         setUser(userData);
-        localStorage.setItem('synapse_user', JSON.stringify(userData));
+        localStorage.setItem(USER_KEY, JSON.stringify(userData));
         return { success: true };
       }
       return { success: false, message: response.message || 'Login failed' };
@@ -76,8 +98,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem('synapse_token');
-    localStorage.removeItem('synapse_user');
+    clearSession();
   };
 
   return (

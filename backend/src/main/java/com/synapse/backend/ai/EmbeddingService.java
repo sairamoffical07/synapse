@@ -13,6 +13,8 @@ import java.util.Map;
 public class EmbeddingService {
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
     private static final int OUTPUT_DIMENSIONALITY = 768;
+    // batchEmbedContents accepts at most 100 requests per call
+    private static final int MAX_BATCH_SIZE = 100;
     private final GeminiHttpClient geminiHttpClient;
     private final String embeddingModel;
 
@@ -37,6 +39,14 @@ public class EmbeddingService {
 
     public List<List<Float>> generateEmbeddings(List<String> texts) {
         if (texts == null || texts.isEmpty()) return Collections.emptyList();
+        List<List<Float>> result = new ArrayList<>(texts.size());
+        for (int start = 0; start < texts.size(); start += MAX_BATCH_SIZE) {
+            result.addAll(embedBatch(texts.subList(start, Math.min(start + MAX_BATCH_SIZE, texts.size()))));
+        }
+        return result;
+    }
+
+    private List<List<Float>> embedBatch(List<String> texts) {
         List<Map<String, Object>> requests = new ArrayList<>(texts.size());
         for (String text : texts) {
             requests.add(Map.of(

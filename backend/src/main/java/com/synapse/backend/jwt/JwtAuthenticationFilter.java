@@ -95,10 +95,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
 
-        } catch (JwtException | IllegalArgumentException | UsernameNotFoundException e) {
-            logger.debug("JWT authentication rejected: "
-                    + (e instanceof io.jsonwebtoken.ExpiredJwtException ? "expired" : "invalid"));
-            writeUnauthorized(response, "Your sign-in session has expired or is invalid. Please sign in again.");
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            logger.info("JWT rejected: route=" + request.getServletPath() + ", category=expired");
+            writeUnauthorized(response, "Your session has expired. Please sign in again.");
+            return;
+        } catch (UsernameNotFoundException e) {
+            // Valid signature but the account no longer exists (e.g. the database was reset)
+            logger.info("JWT rejected: route=" + request.getServletPath() + ", category=unknown_user");
+            writeUnauthorized(response, "Your account could not be found. Please sign in again.");
+            return;
+        } catch (JwtException | IllegalArgumentException e) {
+            logger.info("JWT rejected: route=" + request.getServletPath() + ", category=invalid");
+            writeUnauthorized(response, "Your sign-in session is invalid. Please sign in again.");
             return;
         }
 

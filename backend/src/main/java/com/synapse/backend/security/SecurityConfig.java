@@ -18,6 +18,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -25,14 +27,20 @@ import jakarta.servlet.http.HttpServletResponse;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private static final List<String> DEFAULT_ORIGINS = List.of(
+            "https://synapse-academic.vercel.app", "https://synapse-mgph.vercel.app", "http://localhost:5173");
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final String allowedOriginsStr;
+    private final String allowedOriginRegexStr;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            @Value("${cors.allowed-origins:https://synapse-academic.vercel.app,http://localhost:5173}") String allowedOriginsStr) {
+            @Value("${cors.allowed-origins:}") String allowedOriginsStr,
+            @Value("${cors.allowed-origin-regex:}") String allowedOriginRegexStr) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.allowedOriginsStr = allowedOriginsStr;
+        this.allowedOriginRegexStr = allowedOriginRegexStr;
     }
 
     @Bean
@@ -71,25 +79,51 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        List<String> origins = Arrays.stream(allowedOriginsStr.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty() && !s.equals("*"))
+        List<String> origins = splitList(allowedOriginsStr).stream()
+                .filter(s -> !s.contains("*"))
                 .collect(Collectors.toList());
-
         if (origins.isEmpty()) {
-            origins = List.of("https://synapse-academic.vercel.app", "http://localhost:5173");
+            origins = DEFAULT_ORIGINS;
         }
 
+        // Full-match regexes for extra origins, e.g. this project's Vercel preview deployments.
+        // Wildcards are deliberately not supported in the exact-origin list above.
+        List<Pattern> originPatterns = splitList(allowedOriginRegexStr).stream()
+                .map(Pattern::compile)
+                .collect(Collectors.toList());
+
+        CorsConfiguration configuration = new CorsConfiguration() {
+            @Override
+            public String checkOrigin(String requestOrigin) {
+                String allowed = super.checkOrigin(requestOrigin);
+                if (allowed != null || requestOrigin == null) {
+                    return allowed;
+                }
+                String origin = requestOrigin.trim().toLowerCase(Locale.ROOT);
+                return originPatterns.stream().anyMatch(p -> p.matcher(origin).matches()) ? requestOrigin : null;
+            }
+        };
         configuration.setAllowedOrigins(origins);
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
-        configuration.setAllowCredentials(true);
+        // Auth uses a bearer token header, not cookies, so credentialed CORS is not needed
+        configuration.setAllowCredentials(false);
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    private static List<String> splitList(String value) {
+        if (value == null) {
+            return List.of();
+        }
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
     }
 
     @Bean
