@@ -33,11 +33,11 @@ public class FlashcardGenerationService {
     }
 
     public FlashcardResponseDTO generateFlashcards(String topic, int count, User user) {
-        log.info("Generating flashcards for user [userId={}, topic='{}', count={}]", user.getId(), topic, count);
+        log.info("Generating flashcards for user [userId={}, count={}]", user.getId(), count);
 
         List<ChromaQueryResult> chunks = semanticSearchService.searchSimilarChunks(topic, 5, user.getId());
         if (chunks.isEmpty()) {
-            throw new AIServiceException("No relevant study materials found for topic: " + topic);
+            throw new AIServiceException("No relevant study materials were found. Upload a related PDF and try again.", 422);
         }
 
         StringBuilder contextBuilder = new StringBuilder();
@@ -124,9 +124,11 @@ public class FlashcardGenerationService {
                     .flashcards(cards)
                     .build();
 
+        } catch (AIServiceException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Failed to parse JSON flashcards response from Gemini", e);
-            throw new AIServiceException("Failed to generate flashcards: " + e.getMessage(), e);
+            log.warn("Flashcard response could not be parsed: category={}", e.getClass().getSimpleName());
+            throw new AIServiceException("The AI service returned flashcards in an unreadable format. Please try again.", 502, e);
         }
     }
 

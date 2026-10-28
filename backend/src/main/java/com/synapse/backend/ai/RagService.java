@@ -29,7 +29,7 @@ public class RagService {
     }
 
     public ChatResponse answerQuestion(String question, User user) {
-        log.info("Executing RAG question answering for user [userId={}, question='{}']", user.getId(), question);
+        log.info("Executing RAG question answering for user [userId={}]", user.getId());
 
         List<ChromaQueryResult> relevantChunks =
                 semanticSearchService.searchSimilarChunks(question, TOP_K_RESULTS, user.getId());

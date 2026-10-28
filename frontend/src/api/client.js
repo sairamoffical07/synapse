@@ -16,7 +16,8 @@ export const apiClient = async (endpoint, options = {}) => {
     ...options.headers,
   };
 
-  if (token) {
+  const isAuthEndpoint = endpoint.startsWith('/auth/');
+  if (token && !isAuthEndpoint) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 

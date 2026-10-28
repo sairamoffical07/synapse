@@ -1,15 +1,8 @@
 package com.synapse.backend.ai;
 
 import com.synapse.backend.exception.AIServiceException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -17,20 +10,16 @@ import java.util.Map;
 @Service
 public class GeminiService {
 
-    private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
     private static final String GEMINI_API_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/";
 
-    private final RestTemplate restTemplate;
-    private final String apiKey;
+    private final GeminiHttpClient geminiHttpClient;
     private final String model;
 
     public GeminiService(
-            RestTemplate restTemplate,
-            @Value("${gemini.api-key:}") String apiKey,
-            @Value("${gemini.model:gemini-1.5-flash}") String model) {
-        this.restTemplate = restTemplate;
-        this.apiKey = apiKey != null ? apiKey.trim() : "";
+            GeminiHttpClient geminiHttpClient,
+            @Value("${gemini.model:gemini-3.1-flash-lite}") String model) {
+        this.geminiHttpClient = geminiHttpClient;
         this.model = model;
     }
 
@@ -39,24 +28,14 @@ public class GeminiService {
             throw new IllegalArgumentException("Prompt cannot be empty");
         }
 
-        if (apiKey.isEmpty()) {
-            log.error("Gemini API key is unconfigured. Set the GEMINI_API_KEY environment variable.");
-            throw new AIServiceException("Gemini API key is not configured on the server. Please set GEMINI_API_KEY.");
-        }
-
-        String url = GEMINI_API_URL + model + ":generateContent?key=" + apiKey;
+        String url = GEMINI_API_URL + model + ":generateContent";
 
         Map<String, Object> part = Map.of("text", prompt);
         Map<String, Object> content = Map.of("parts", List.of(part));
         Map<String, Object> requestBody = Map.of("contents", List.of(content));
 
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-            Map<String, Object> responseBody = response.getBody();
+            Map responseBody = geminiHttpClient.post(url, requestBody);
 
             if (responseBody != null && responseBody.containsKey("candidates")) {
                 List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
@@ -75,13 +54,12 @@ public class GeminiService {
                 }
             }
 
-            throw new AIServiceException("Gemini API returned an empty or invalid response candidate.");
+            throw new AIServiceException("The AI service returned an empty response. Please try again.", 502);
 
-        } catch (AIServiceException aie) {
-            throw aie;
-        } catch (Exception ex) {
-            log.error("Error calling Gemini GenerateContent API", ex);
-            throw new AIServiceException("Failed to generate text from Gemini AI: " + ex.getMessage(), ex);
+        } catch (AIServiceException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new AIServiceException("The AI service returned an unreadable response. Please try again.", 502, ex);
         }
     }
 }
