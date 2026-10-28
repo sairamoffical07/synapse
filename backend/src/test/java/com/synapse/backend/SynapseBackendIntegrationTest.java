@@ -35,6 +35,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -88,7 +89,36 @@ public class SynapseBackendIntegrationTest {
                 ));
 
         when(geminiService.generateText(anyString()))
-                .thenReturn("Polymorphism in Object-Oriented Programming allows methods to perform different tasks based on the object calling them.");
+                .thenReturn("{\"questions\":[{\"question\":\"What is polymorphism?\",\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctOptionIndex\":0,\"explanation\":\"Methods can behave differently based on the object.\"}],\"flashcards\":[{\"front\":\"What is polymorphism?\",\"back\":\"Objects can respond differently to the same method call.\"}]}");
+    }
+
+    @Test
+    void testMissingAndInvalidTokensReturn401() throws Exception {
+        mockMvc.perform(get("/api/study-materials"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Please sign in to continue."));
+
+        mockMvc.perform(get("/api/study-materials").header("Authorization", "Bearer not-a-jwt"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void testCorsAllowsConfiguredOriginsAndRejectsUnknownOrigin() throws Exception {
+        mockMvc.perform(options("/api/study-materials")
+                        .header("Origin", "https://synapse-academic.vercel.app")
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Access-Control-Allow-Origin", "https://synapse-academic.vercel.app"));
+
+        mockMvc.perform(options("/api/study-materials")
+                        .header("Origin", "https://unknown.example")
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isForbidden())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .doesNotExist("Access-Control-Allow-Origin"));
     }
 
     @Test
@@ -168,6 +198,13 @@ public class SynapseBackendIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
+        mockMvc.perform(post("/api/ai/flashcards")
+                        .header("Authorization", authHeader)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new com.synapse.backend.dto.FlashcardRequest("Polymorphism", 3))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.flashcards[0].front").exists());
+
         // 8. Delete Study Material
         mockMvc.perform(delete("/api/study-materials/" + materialId)
                         .header("Authorization", authHeader))
@@ -209,14 +246,14 @@ public class SynapseBackendIntegrationTest {
 
         Long idA = objectMapper.readTree(uploadA.getResponse().getContentAsString()).get("data").get("id").asLong();
 
-        // User B attempts to access User A's file -> Expect Error (400 Bad Request / 403 Forbidden)
+        // A signed-in user who does not own the file receives a clear forbidden response.
         mockMvc.perform(get("/api/study-materials/" + idA)
                         .header("Authorization", "Bearer " + tokenB))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isForbidden());
 
         // User B attempts to delete User A's file -> Expect Error
         mockMvc.perform(delete("/api/study-materials/" + idA)
                         .header("Authorization", "Bearer " + tokenB))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isForbidden());
     }
 }

@@ -10,6 +10,7 @@ import com.synapse.backend.chroma.ChromaDocumentMetadata;
 import com.synapse.backend.dto.StudyMaterialDTO;
 import com.synapse.backend.entity.User;
 import com.synapse.backend.exception.ResourceNotFoundException;
+import com.synapse.backend.exception.AIServiceException;
 import com.synapse.backend.exception.StudyMaterialProcessingException;
 import com.synapse.backend.service.PdfTextExtractorService;
 import org.slf4j.Logger;
@@ -125,13 +126,13 @@ public class StudyMaterialService {
             savedMaterial.setProcessingStatus(STATUS_COMPLETED);
             StudyMaterial finalized = studyMaterialRepository.save(savedMaterial);
 
-            log.info("Successfully processed study material [id={}, user={}, chunks={}]",
-                    finalized.getId(), user.getEmail(), persistedChunks.size());
+            log.info("Study material processed [id={}, chunks={}]",
+                    finalized.getId(), persistedChunks.size());
 
             return StudyMaterialDTO.fromEntity(finalized);
 
         } catch (Exception ex) {
-            log.error("Failed processing PDF pipeline for file [{}]", originalFileName, ex);
+            log.warn("PDF processing failed: category={}, materialId={}", ex.getClass().getSimpleName(), savedMaterial.getId());
 
             savedMaterial.setProcessingStatus(STATUS_FAILED);
             studyMaterialRepository.save(savedMaterial);
@@ -140,10 +141,13 @@ public class StudyMaterialService {
             try {
                 chromaDBClient.deleteByStudyMaterialId(savedMaterial.getId());
             } catch (Exception e) {
-                log.warn("Failed cleaning ChromaDB vectors after error", e);
+                log.warn("Failed cleaning vector records after PDF processing failure");
             }
 
-            throw new StudyMaterialProcessingException("PDF processing pipeline failed: " + ex.getMessage(), ex);
+            if (ex instanceof AIServiceException aiException) {
+                throw aiException;
+            }
+            throw new StudyMaterialProcessingException("PDF processing failed. Check that the PDF is readable and try again.", ex);
         }
     }
 
@@ -189,12 +193,12 @@ public class StudyMaterialService {
 
         studyMaterialRepository.delete(material);
 
-        log.info("Deleted study material [id={}, user={}] from PostgreSQL, ChromaDB, and disk", id, user.getEmail());
+        log.info("Deleted study material [id={}]", id);
     }
 
     private void verifyOwnership(StudyMaterial material, User user) {
         if (!material.getUser().getId().equals(user.getId())) {
-            throw new StudyMaterialProcessingException("Access denied: You do not own this study material");
+            throw new org.springframework.security.access.AccessDeniedException("Document ownership check failed");
         }
     }
 
@@ -225,7 +229,7 @@ public class StudyMaterialService {
     private void writeFileToDisk(MultipartFile file, Path destinationPath) {
         try (InputStream inputStream = file.getInputStream()) {
             Files.copy(inputStream, destinationPath, StandardCopyOption.REPLACE_EXISTING);
-            log.info("Saved uploaded file to [{}]", destinationPath);
+            log.debug("Saved uploaded study material");
         } catch (IOException ex) {
             throw new StudyMaterialProcessingException("Failed to store file on disk", ex);
         }
@@ -235,7 +239,7 @@ public class StudyMaterialService {
         try {
             Files.deleteIfExists(filePath);
         } catch (IOException ex) {
-            log.warn("Failed to clean up file at path [{}]", filePath, ex);
+            log.warn("Failed to clean up an uploaded file: category={}", ex.getClass().getSimpleName());
         }
     }
 }

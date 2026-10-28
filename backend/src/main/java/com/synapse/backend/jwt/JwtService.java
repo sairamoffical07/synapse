@@ -52,7 +52,6 @@ public class JwtService {
 
     // Validate token
     public boolean isTokenValid(String token, String email) {
-
-        return extractEmail(token).equals(email);
+        return java.util.Objects.equals(extractEmail(token), email);
     }
 }

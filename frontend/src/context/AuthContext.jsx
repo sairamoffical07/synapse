@@ -3,12 +3,19 @@ import { authApi } from '../api/auth';
 
 const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => localStorage.getItem('synapse_token'));
-  const [user, setUser] = useState(() => {
+const readSavedUser = () => {
+  try {
     const saved = localStorage.getItem('synapse_user');
     return saved ? JSON.parse(saved) : null;
-  });
+  } catch {
+    localStorage.removeItem('synapse_user');
+    return null;
+  }
+};
+
+export const AuthProvider = ({ children }) => {
+  const [token, setToken] = useState(() => localStorage.getItem('synapse_token'));
+  const [user, setUser] = useState(readSavedUser);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

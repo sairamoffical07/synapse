@@ -33,7 +33,7 @@ public class SemanticSearchService {
             return List.of();
         }
 
-        log.info("Generating embedding for search query: '{}'", query);
+        log.debug("Generating embedding for a search query");
         List<Float> queryEmbedding = embeddingService.generateEmbedding(query);
 
         log.info("Executing ChromaDB similarity search for userId={}", userId);

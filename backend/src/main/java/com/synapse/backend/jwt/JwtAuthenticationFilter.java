@@ -6,6 +6,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.synapse.backend.dto.ApiResponse;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import io.jsonwebtoken.JwtException;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import jakarta.servlet.FilterChain;
@@ -20,10 +25,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
+    private final ObjectMapper objectMapper;
 
-    public JwtAuthenticationFilter(JwtService jwtService, CustomUserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtService jwtService, CustomUserDetailsService userDetailsService,
+                                   ObjectMapper objectMapper) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.objectMapper = objectMapper;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return "OPTIONS".equalsIgnoreCase(request.getMethod())
+                || path.startsWith("/api/auth/")
+                || path.equals("/api/health")
+                || path.startsWith("/api/health/");
     }
 
     @Override
@@ -35,8 +52,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (authHeader == null || authHeader.isBlank()) {
             filterChain.doFilter(request, response);
+            return;
+        }
+
+        if (!authHeader.startsWith("Bearer ") || authHeader.length() <= 7) {
+            writeUnauthorized(response, "Your sign-in session is invalid. Please sign in again.");
             return;
         }
 
@@ -66,14 +88,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             .getContext()
                             .setAuthentication(authentication);
 
-                    logger.debug("User Authenticated: " + email);
+                    logger.debug("JWT authentication succeeded");
+                } else {
+                    writeUnauthorized(response, "Your sign-in session has expired or is invalid. Please sign in again.");
+                    return;
                 }
             }
 
-        } catch (Exception e) {
-            logger.debug("JWT Authentication Failed: " + e.getMessage());
+        } catch (JwtException | IllegalArgumentException | UsernameNotFoundException e) {
+            logger.debug("JWT authentication rejected: "
+                    + (e instanceof io.jsonwebtoken.ExpiredJwtException ? "expired" : "invalid"));
+            writeUnauthorized(response, "Your sign-in session has expired or is invalid. Please sign in again.");
+            return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
+        objectMapper.writeValue(response.getWriter(), ApiResponse.error(message));
     }
 }

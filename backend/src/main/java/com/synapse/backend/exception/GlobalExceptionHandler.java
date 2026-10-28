@@ -30,28 +30,28 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleChromaException(ChromaDBException ex) {
         return ResponseEntity
                 .status(HttpStatus.BAD_GATEWAY)
-                .body(ApiResponse.error("Vector Store Error: " + ex.getMessage()));
+                .body(ApiResponse.error("Document search is temporarily unavailable. Please try again later."));
     }
 
     @ExceptionHandler(AIServiceException.class)
     public ResponseEntity<ApiResponse<Void>> handleAIException(AIServiceException ex) {
         return ResponseEntity
-                .status(HttpStatus.BAD_GATEWAY)
-                .body(ApiResponse.error("AI Service Error: " + ex.getMessage()));
+                .status(ex.getStatus())
+                .body(ApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error("Access denied: " + ex.getMessage()));
+                .body(ApiResponse.error("You do not have permission to access this resource."));
     }
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuthentication(AuthenticationException ex) {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error("Authentication failed: " + ex.getMessage()));
+                .body(ApiResponse.error("Your sign-in session is invalid. Please sign in again."));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -81,8 +81,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception ex) {
+        org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class)
+                .error("Unhandled request failure: category={}", ex.getClass().getSimpleName());
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("An unexpected error occurred: " + ex.getMessage()));
+                .body(ApiResponse.error("An unexpected server error occurred. Please try again later."));
     }
 }

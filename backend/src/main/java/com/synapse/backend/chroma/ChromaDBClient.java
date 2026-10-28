@@ -54,7 +54,7 @@ public class ChromaDBClient {
                         Map collectionMap = (Map) item;
                         if (collectionName.equals(collectionMap.get("name"))) {
                             cachedCollectionId = (String) collectionMap.get("id");
-                            log.info("Found existing ChromaDB collection [{}] with id [{}]", collectionName, cachedCollectionId);
+                            log.info("Connected to the configured vector collection");
                             return cachedCollectionId;
                         }
                     }
@@ -72,7 +72,7 @@ public class ChromaDBClient {
             ResponseEntity<Map> createResponse = restTemplate.postForEntity(url, entity, Map.class);
             if (createResponse.getBody() != null && createResponse.getBody().containsKey("id")) {
                 cachedCollectionId = (String) createResponse.getBody().get("id");
-                log.info("Created new ChromaDB collection [{}] with id [{}]", collectionName, cachedCollectionId);
+                log.info("Created the configured vector collection");
                 return cachedCollectionId;
             }
 
@@ -80,7 +80,7 @@ public class ChromaDBClient {
             return cachedCollectionId;
 
         } catch (Exception e) {
-            log.warn("ChromaDB vector store unconfigured or unreachable. Using fallback collection context.", e.getMessage());
+            log.warn("Vector store is unavailable: category={}", e.getClass().getSimpleName());
             cachedCollectionId = "synapse-fallback-collection-id";
             return cachedCollectionId;
         }
@@ -121,7 +121,7 @@ public class ChromaDBClient {
             log.info("Successfully upserted {} vectors into ChromaDB collection [{}]", documents.size(), chromaDBProperties.getCollection());
 
         } catch (Exception e) {
-            log.warn("Notice: ChromaDB vector store synchronization warning: {}. Document processing in SQL DB completed.", e.getMessage());
+            log.warn("Vector store synchronization failed: category={}. Document processing in SQL DB completed.", e.getClass().getSimpleName());
         }
     }
 
@@ -178,7 +178,7 @@ public class ChromaDBClient {
             return results;
 
         } catch (Exception e) {
-            log.warn("ChromaDB vector query fallback: {}", e.getMessage());
+            log.warn("Vector search failed: category={}", e.getClass().getSimpleName());
             return List.of();
         }
     }
@@ -201,7 +201,7 @@ public class ChromaDBClient {
             log.info("Deleted vectors from ChromaDB for studyMaterialId={}", studyMaterialId);
 
         } catch (Exception e) {
-            log.warn("ChromaDB vector deletion warning for studyMaterialId={}: {}", studyMaterialId, e.getMessage());
+            log.warn("Vector deletion failed for studyMaterialId={}: category={}", studyMaterialId, e.getClass().getSimpleName());
         }
     }
 }

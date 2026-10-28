@@ -33,11 +33,11 @@ public class QuizGenerationService {
     }
 
     public QuizResponseDTO generateQuiz(String topic, int numberOfQuestions, User user) {
-        log.info("Generating quiz for user [userId={}, topic='{}', questions={}]", user.getId(), topic, numberOfQuestions);
+        log.info("Generating quiz for user [userId={}, questions={}]", user.getId(), numberOfQuestions);
 
         List<ChromaQueryResult> chunks = semanticSearchService.searchSimilarChunks(topic, 5, user.getId());
         if (chunks.isEmpty()) {
-            throw new AIServiceException("No relevant study materials found for topic: " + topic);
+            throw new AIServiceException("No relevant study materials were found. Upload a related PDF and try again.", 422);
         }
 
         StringBuilder contextBuilder = new StringBuilder();
@@ -135,9 +135,11 @@ public class QuizGenerationService {
                     .questions(questions)
                     .build();
 
+        } catch (AIServiceException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Failed to parse JSON quiz response from Gemini", e);
-            throw new AIServiceException("Failed to generate quiz questions: " + e.getMessage(), e);
+            log.warn("Quiz response could not be parsed: category={}", e.getClass().getSimpleName());
+            throw new AIServiceException("The AI service returned a quiz in an unreadable format. Please try again.", 502, e);
         }
     }
 
